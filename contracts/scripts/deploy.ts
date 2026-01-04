@@ -45,13 +45,33 @@ async function main() {
   console.log("PaymentScheduler deployed to:", paymentSchedulerAddress);
   console.log();
 
+  // Deploy PaymentProcessor
+  console.log("Deploying PaymentProcessor...");
+  const PaymentProcessor = await ethers.getContractFactory("PaymentProcessor");
+  const paymentProcessor = await PaymentProcessor.deploy();
+  await paymentProcessor.waitForDeployment();
+  const paymentProcessorAddress = await paymentProcessor.getAddress();
+  console.log("PaymentProcessor deployed to:", paymentProcessorAddress);
+  console.log();
+
+  // Deploy QRCodePayment
+  console.log("Deploying QRCodePayment...");
+  const QRCodePayment = await ethers.getContractFactory("QRCodePayment");
+  const qrCodePayment = await QRCodePayment.deploy();
+  await qrCodePayment.waitForDeployment();
+  const qrCodePaymentAddress = await qrCodePayment.getAddress();
+  console.log("QRCodePayment deployed to:", qrCodePaymentAddress);
+  console.log();
+
   console.log("=".repeat(60));
   console.log("Deployment Summary");
   console.log("=".repeat(60));
-  console.log("SwapRouter:        ", swapRouterAddress);
-  console.log("VaultManager:      ", vaultManagerAddress);
-  console.log("BundleFactory:     ", bundleFactoryAddress);
-  console.log("PaymentScheduler:  ", paymentSchedulerAddress);
+  console.log("SwapRouter:         ", swapRouterAddress);
+  console.log("VaultManager:       ", vaultManagerAddress);
+  console.log("BundleFactory:      ", bundleFactoryAddress);
+  console.log("PaymentScheduler:   ", paymentSchedulerAddress);
+  console.log("PaymentProcessor:   ", paymentProcessorAddress);
+  console.log("QRCodePayment:      ", qrCodePaymentAddress);
   console.log("=".repeat(60));
   console.log();
 
