@@ -17,7 +17,7 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  defaultNetwork: "mantleSepolia", // Default network when not specified
+  defaultNetwork: "mantleTestnet", // Default network when not specified
   networks: {
     hardhat: {
       chainId: 31337,
@@ -28,6 +28,12 @@ const config: HardhatUserConfig = {
       accounts: process.env.ACCOUNT_PRIVATE_KEY ? [process.env.ACCOUNT_PRIVATE_KEY] : [],
       // Use default configuration for gas (will use network's basefee + priorityfee)
     },
+    mantleTestnet: {
+      url: "https://rpc.testnet.mantle.xyz", // Mantle Testnet
+      chainId: 5001,
+      accounts: process.env.ACCOUNT_PRIVATE_KEY ? [process.env.ACCOUNT_PRIVATE_KEY] : [],
+      gasPrice: 20000000, // 0.02 gwei
+    },
     mantleSepolia: {
       url: "https://rpc.sepolia.mantle.xyz", // Sepolia Testnet
       chainId: 5003,
@@ -36,8 +42,8 @@ const config: HardhatUserConfig = {
     },
     // Legacy network names for backward compatibility
     "mantle-testnet": {
-      url: "https://rpc.sepolia.mantle.xyz",
-      chainId: 5003,
+      url: "https://rpc.testnet.mantle.xyz",
+      chainId: 5001,
       accounts: process.env.ACCOUNT_PRIVATE_KEY ? [process.env.ACCOUNT_PRIVATE_KEY] : [],
       gasPrice: 20000000,
     },
@@ -95,7 +101,7 @@ const config: HardhatUserConfig = {
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   },
   paths: {
-    sources: "./contracts",
+    sources: "./contracts",  // Contracts in contracts subfolder
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts",

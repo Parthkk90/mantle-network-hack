@@ -111,6 +111,86 @@ CRESCA is built on Mantle Network using a multi-layered architecture that separa
   - `batchSend(address token, address[] recipients, uint256[] amounts)`
   - `approveToken(address token, address spender, uint256 amount)`
 
+### 5. RWA / RealFi System
+
+#### RWAToken.sol (ERC-20)
+- **Purpose**: Tokenize real-world assets (real estate, bonds, invoices, cash-flow rights)
+- **Key Features**:
+  - ERC-20 compliant tokens representing fractionalized asset ownership
+  - KYC-gated transfers for regulatory compliance
+  - Automated yield distribution to token holders
+  - Support for multiple asset types with detailed metadata
+- **Key Functions**:
+  - `mint(address to, uint256 amount)` - Mint tokens to verified investors
+  - `verifyAsset(string valuationHash)` - Verify asset with legal documentation
+  - `distributeYield(uint256 amount, string description)` - Distribute yields to holders
+  - `claimYield()` - Holders claim accumulated yields
+  - `isKYCVerified(address account)` - Check KYC status
+  - `setTransferRestricted(bool restricted)` - Control transfer permissions
+
+#### KYCRegistry.sol
+- **Purpose**: Manage KYC/AML compliance for RWA token holders
+- **Key Features**:
+  - Tiered KYC levels (Basic, Intermediate, Advanced)
+  - Jurisdiction-based compliance rules
+  - Accredited investor verification
+  - Blacklist management
+- **KYC Tiers**:
+  - `BASIC` - Basic identity verification
+  - `INTERMEDIATE` - Enhanced due diligence
+  - `ADVANCED` - Accredited investor status
+- **Key Functions**:
+  - `verifyKYC(address user, KYCTier tier, string jurisdiction, ...)` - Verify user
+  - `updateKYCTier(address user, KYCTier newTier)` - Upgrade/downgrade tier
+  - `revokeKYC(address user, string reason)` - Revoke verification
+  - `setJurisdictionRules(string jurisdiction, ...)` - Set compliance rules per country
+  - `isVerified(address user)` - Check if user is verified
+  - `canInvestFromJurisdiction(address user, uint256 amount)` - Check investment eligibility
+
+#### RWAVault.sol
+- **Purpose**: Secure custody of RWA-backed assets with institutional-grade controls
+- **Key Features**:
+  - Multi-signature approval for withdrawals
+  - Time-locked withdrawals (2-day timelock)
+  - Asset auditing capabilities
+  - Yield collection tracking
+- **Key Functions**:
+  - `depositAsset(address token, uint256 amount, string assetId)` - Deposit assets to custody
+  - `requestWithdrawal(address token, address recipient, uint256 amount, ...)` - Request withdrawal
+  - `approveWithdrawal(uint256 requestId)` - Multi-sig approval
+  - `executeWithdrawal(uint256 requestId)` - Execute after timelock
+  - `collectYield(address token, uint256 amount)` - Collect RWA yields
+  - `auditAsset(address token)` - Verify custody balances
+
+#### YieldDistributor.sol
+- **Purpose**: Distribute RWA yields with tax compliance and jurisdiction rules
+- **Key Features**:
+  - Automated yield distribution to token holders
+  - Jurisdiction-based tax withholding
+  - Batch claiming for gas efficiency
+  - Comprehensive tracking and reporting
+- **Key Functions**:
+  - `createDistribution(address rwaToken, address yieldToken, uint256 amount, ...)` - Create new distribution
+  - `claimYield(uint256 distributionId)` - Claim individual distribution
+  - `batchClaimYield(uint256[] distributionIds)` - Claim multiple distributions
+  - `getClaimableAmount(uint256 distributionId, address holder)` - Check claimable yield
+  - `setTaxWithholding(string jurisdiction, uint256 rate, address recipient)` - Set tax rules
+
+#### InvoiceFactoring.sol
+- **Purpose**: Tokenize invoices and provide early payment liquidity
+- **Key Features**:
+  - Invoice verification and factoring
+  - Credit limit management for buyers
+  - Liquidity pool for funding
+  - Default tracking and management
+- **Key Functions**:
+  - `createInvoice(address buyer, uint256 amount, uint256 dueDate, ...)` - Create invoice
+  - `verifyInvoice(uint256 invoiceId, uint256 discountRate)` - Verify and price invoice
+  - `fundInvoice(uint256 invoiceId)` - Fund verified invoice (seller gets paid)
+  - `payInvoice(uint256 invoiceId)` - Buyer pays invoice
+  - `addLiquidity(uint256 amount)` - Add liquidity to factoring pool
+  - `setBuyerCreditLimit(address buyer, uint256 limit)` - Set buyer credit limits
+
 ## Backend Architecture
 
 ### 1. API Services (Node.js + Express)

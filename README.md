@@ -1,32 +1,40 @@
-# CRESCA - Simple DeFi Wallet with Bundle Investing
+# CRESCA - DeFi Wallet with RWA Tokenization
 
-> Mobile-first crypto wallet on Mantle Network with custom token bundles, swaps, and automated payments
+> Mobile-first wallet on Mantle Network with crypto bundles, RWA tokenization, and automated payments
 
 ## 🚀 Overview
 
-CRESCA is a DeFi wallet built on Mantle Network that simplifies cryptocurrency investing through innovative bundle tokens, seamless swaps, and automated payment scheduling.
+CRESCA is a comprehensive DeFi platform built on Mantle Network that combines traditional crypto investing with Real-World Asset (RWA) tokenization. Users can invest in crypto bundles, tokenized real estate, bonds, invoices, and more - all from a simple mobile interface.
 
 ## ✨ Core Features
 
-### 1. Bundle Token Investing
+### 1. RWA / RealFi (NEW! 🎯)
+- **Tokenize Real-World Assets**: Real estate, bonds, invoices, and cash-flow rights
+- **KYC/AML Compliance**: Multi-tier verification with jurisdiction rules
+- **Institutional Custody**: Multi-sig + time-locked withdrawals
+- **Compliant Yield Distribution**: Automated distributions with tax withholding
+- **Invoice Factoring**: Get immediate liquidity from unpaid invoices
+- **Fractional Ownership**: Invest in $5M property with just $100
+
+### 2. Bundle Token Investing
 - **Create Custom Bundles**: Combine multiple cryptocurrencies (BTC, ETH, SOL, etc.) into one investment basket
 - **Single-Click Diversification**: Buy one bundle that holds all selected tokens
 - **Auto-Rebalancing**: Bundles automatically maintain target allocations (e.g., 50% BTC, 30% ETH, 20% SOL)
 - **Track Performance**: Monitor entire bundle performance in one view
 - **Example**: "Blue Chip Bundle" with 40% BTC, 40% ETH, 20% SOL
 
-### 2. Swap
+### 3. Swap
 - **Easy Token Trading**: Swap between any supported cryptocurrencies
 - **Best Price Routing**: Automatically finds best exchange rates across multiple DEXs
 - **Low Fees**: Competitive swap fees (0.3% on trades)
 
-### 3. Send & Receive Payments
+### 4. Send & Receive Payments
 - **Simple Transfers**: Send crypto to any wallet address
 - **Tap-to-Pay**: Quick payment interface for everyday transactions
 - **Batch Payments**: Send to multiple recipients at once
 - **Instant Receiving**: Generate addresses to receive payments instantly
 
-### 4. Calendar Scheduled Payments
+### 5. Calendar Scheduled Payments
 - **Recurring Payments**: Set up monthly bills, subscriptions, or salary payments
 - **One-Time Scheduled Payments**: Schedule payments for future dates
 - **Dollar-Cost Averaging**: Automatically buy crypto on a schedule
@@ -35,13 +43,19 @@ CRESCA is a DeFi wallet built on Mantle Network that simplifies cryptocurrency i
 
 ## 🎯 Target Users
 
-- **Smart Investors**: Portfolio diversification without managing multiple tokens
+- **Smart Investors**: Diversify across crypto + real-world assets
+- **Real Estate Investors**: Fractional property ownership with rental income
+- **Businesses**: Invoice factoring for immediate cash flow
+- **Bond Investors**: Access tokenized corporate/government bonds
 - **Crypto Users**: Simple wallet for daily transactions
 - **DCA Enthusiasts**: Automated buy strategies
 - **Freelancers**: Crypto payments and recurring bills
-
-## 💎 Unique Value Proposition
-
+RWA + Crypto in One Place**: First wallet combining DeFi and real-world assets
+- **Compliant by Design**: KYC built into token transfers, not an afterthought
+- **Mobile-First RWA**: Access institutional assets from your phone
+- **Bundle Innovation**: Create portfolios with crypto + real estate + bonds
+- **Set-and-Forget Payments**: Schedule once, automate forever
+- **Mantle-Powered**: Ultra-low fees make fractional RWA investments viable
 - **Bundle Token Innovation**: Only wallet with custom token baskets as a single asset
 - **Set-and-Forget Payments**: Schedule once, automate forever
 - **Diversification Made Simple**: Multi-token exposure without complexity
@@ -69,8 +83,14 @@ mantle-hack/
 ## 🛠️ Tech Stack
 
 - **Blockchain**: Mantle Network (L2)
-- **Smart Contracts**: Solidity, Hardhat
-- **Backend**: Node.js, Express
+- *🏆 Track Prize: RWA / RealFi
+
+See [RWA_TRACK_SUBMISSION.md](RWA_TRACK_SUBMISSION.md) for complete details on our RWA implementation.
+
+## 📚 Resources
+
+- [RWA Implementation Guide](docs/RWA_REALFI_IMPLEMENTATION.md)
+- [Architecture Documentation](ARCHITECTURE.md)- **Backend**: Node.js, Express
 - **Frontend**: React Native
 - **Web3**: Viem, Mantle SDK
 - **Storage**: IPFS for bundle metadata
