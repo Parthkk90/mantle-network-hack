@@ -17,7 +17,7 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  defaultNetwork: "mantleTestnet", // Default network when not specified
+  defaultNetwork: "mantleSepolia", // Default network when not specified
   networks: {
     hardhat: {
       chainId: 31337,
@@ -29,8 +29,8 @@ const config: HardhatUserConfig = {
       // Use default configuration for gas (will use network's basefee + priorityfee)
     },
     mantleTestnet: {
-      url: "https://rpc.testnet.mantle.xyz", // Mantle Testnet
-      chainId: 5001,
+      url: "https://rpc.sepolia.mantle.xyz", // Mantle Sepolia Testnet (ChainID 5003)
+      chainId: 5003,
       accounts: process.env.ACCOUNT_PRIVATE_KEY ? [process.env.ACCOUNT_PRIVATE_KEY] : [],
       gasPrice: 20000000, // 0.02 gwei
     },

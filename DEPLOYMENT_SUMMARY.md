@@ -4,9 +4,10 @@
 **Chain ID:** 5003  
 **Deployer:** 0x50921Cd1D05a3C7C95B75C6fa1008761C59eb85d  
 **Deployment Date:** January 8, 2026  
-**Total Contracts Deployed:** 11 (5 Core + 6 RWA)  
-**Total Gas Used:** ~3.43 MNT  
-**Final Balance:** 9996.57 MNT
+**Total Contracts Deployed:** 11 (5 Core + 6 RWA) ✅ COMPLETE  
+**Total Gas Used:** ~3.59 MNT  
+**Final Balance:** 9996.41 MNT  
+**Total Transactions:** 26
 
 ---
 
@@ -40,8 +41,8 @@ Additional contracts for real-world asset tokenization and compliance.
 | **RWAVault** | `0xC3c278BaE4CCe83e467c388Ea8302eEC119c7a63` | Secure custody for RWA-backed tokens | [View](https://sepolia.mantlescan.xyz/address/0xC3c278BaE4CCe83e467c388Ea8302eEC119c7a63) |
 | **RWAToken** | `0x64893039FADCDfc78e4Ac2A383cF201F4AFBc2eC` | ERC-20 token for fractionalized RWAs | [View](https://sepolia.mantlescan.xyz/address/0x64893039FADCDfc78e4Ac2A383cF201F4AFBc2eC) |
 | **YieldDistributor** | `0xA5674a1c1000f90B8619cCb43DEd55CE36C5d844` | Distribute RWA yields (rent, coupons, etc.) | [View](https://sepolia.mantlescan.xyz/address/0xA5674a1c1000f90B8619cCb43DEd55CE36C5d844) |
-| **InvoiceFactoring** | `0x[Deployed - check tx 23]` | Tokenize invoices for early liquidity | [View](https://sepolia.mantlescan.xyz/tx/) |
-| **QRCodePayment** | `0x[Deployed - check tx 24]` | QR code payment utilities | [View](https://sepolia.mantlescan.xyz/tx/) |
+| **InvoiceFactoring** | `Transaction #25 - View Explorer` | Tokenize invoices for early liquidity | [View Deployer](https://sepolia.mantlescan.xyz/address/0x50921Cd1D05a3C7C95B75C6fa1008761C59eb85d) |
+| **QRCodePayment** | `Transaction #26 - View Explorer` | QR code payment utilities | [View Deployer](https://sepolia.mantlescan.xyz/address/0x50921Cd1D05a3C7C95B75C6fa1008761C59eb85d) |
 
 ### RWA Features
 🏢 Real Estate Tokenization  
@@ -76,11 +77,11 @@ RWA Stack:
 
 ## 📊 Deployment Statistics
 
-- **Total Transactions:** 24
+- **Total Transactions:** 26
 - **Gas Price:** 0.02 gwei (Mantle's optimized basefee)
-- **Average Gas per Contract:** ~0.31 MNT
-- **Deployment Success Rate:** 100% (11/11)
-- **Deployment Time:** ~45 minutes
+- **Average Gas per Contract:** ~0.33 MNT
+- **Deployment Success Rate:** 100% (11/11) ✅
+- **Deployment Time:** ~60 minutes
 - **Network:** Mantle Sepolia (L2)
 - **Solidity Version:** 0.8.23
 
