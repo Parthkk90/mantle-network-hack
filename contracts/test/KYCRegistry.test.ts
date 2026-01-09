@@ -6,9 +6,10 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 describe("KYCRegistry", function () {
   let kycRegistry: KYCRegistry;
   let owner: SignerWithAddress;
+  let user: SignerWithAddress;
 
   before(async function () {
-    [owner] = await ethers.getSigners();
+    [owner, user] = await ethers.getSigners();
     
     kycRegistry = await ethers.getContractAt(
       "KYCRegistry",
@@ -32,12 +33,14 @@ describe("KYCRegistry", function () {
 
   describe("KYC Status", function () {
     it("Should return KYC status for an address", async function () {
-      const status = await kycRegistry.kycStatuses(owner.address);
+      const [signer] = await ethers.getSigners();
+      const status = await kycRegistry.kycStatuses(signer.address);
       expect(status).to.exist;
     });
 
     it("Should check if address is blacklisted", async function () {
-      const isBlacklisted = await kycRegistry.isBlacklisted(owner.address);
+      const [signer] = await ethers.getSigners();
+      const isBlacklisted = await kycRegistry.isBlacklisted(signer.address);
       expect(typeof isBlacklisted).to.equal("boolean");
     });
   });
