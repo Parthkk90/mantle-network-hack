@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "cresca-app",
+    "name": "CRESCA",
     "slug": "cresca-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,21 +10,28 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#007AFF"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cresca.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#007AFF"
       },
+      "package": "com.cresca.app",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "network": "mantle-sepolia",
+      "chainId": 5003,
+      "contractAddress": "0x7D7A1bbD55c6A2e1F23cD711B319F377D09D93f8"
     }
   }
 }
