@@ -15,9 +15,9 @@ export const PAYMENT_PROCESSOR_ADDRESS = '0x7D7A1bbD55c6A2e1F23cD711B319F377D09D
 export const PAYMENT_PROCESSOR_ABI = [
   'function sendMNT(address payable recipient, string calldata note) external payable returns (uint256)',
   'function sendToken(address token, address recipient, uint256 amount, string calldata note) external returns (uint256)',
-  'function getUserSentPayments(address user) external view returns (uint256[])',
-  'function getUserReceivedPayments(address user) external view returns (uint256[])',
   'function payments(uint256) external view returns (uint256 id, address sender, address recipient, address token, uint256 amount, uint256 timestamp, string memory note, uint8 paymentType)',
+  'function userSentPayments(address, uint256) external view returns (uint256)',
+  'function userReceivedPayments(address, uint256) external view returns (uint256)',
 ];
 
 export const ERC20_ABI = [

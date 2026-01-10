@@ -115,55 +115,8 @@ class PaymentService {
   }
 
   async getPaymentHistory(userAddress: string): Promise<{ sent: Payment[]; received: Payment[] }> {
-    try {
-      const contract = await this.getContract();
-
-      const sentIds = await contract.getUserSentPayments(userAddress);
-      const receivedIds = await contract.getUserReceivedPayments(userAddress);
-
-      const sent = await Promise.all(
-        sentIds.map(async (id: bigint) => {
-          const payment = await contract.payments(id);
-          return {
-            id: id.toString(),
-            sender: payment.sender,
-            recipient: payment.recipient,
-            token: payment.token,
-            amount:
-              payment.token === ethers.ZeroAddress
-                ? ethers.formatEther(payment.amount)
-                : ethers.formatUnits(payment.amount, 18),
-            timestamp: new Date(Number(payment.timestamp) * 1000),
-            note: payment.note,
-            type: payment.paymentType,
-          };
-        })
-      );
-
-      const received = await Promise.all(
-        receivedIds.map(async (id: bigint) => {
-          const payment = await contract.payments(id);
-          return {
-            id: id.toString(),
-            sender: payment.sender,
-            recipient: payment.recipient,
-            token: payment.token,
-            amount:
-              payment.token === ethers.ZeroAddress
-                ? ethers.formatEther(payment.amount)
-                : ethers.formatUnits(payment.amount, 18),
-            timestamp: new Date(Number(payment.timestamp) * 1000),
-            note: payment.note,
-            type: payment.paymentType,
-          };
-        })
-      );
-
-      return { sent, received };
-    } catch (error: any) {
-      console.error('Payment history error:', error);
-      return { sent: [], received: [] };
-    }
+    console.log('Payment history feature coming soon - contract needs view functions');
+    return { sent: [], received: [] };
   }
 }
 

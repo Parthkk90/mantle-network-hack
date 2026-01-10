@@ -27,12 +27,18 @@ export default function HomeScreen({ navigation }: any) {
   const loadWalletData = async () => {
     try {
       const addr = await WalletService.getAddress();
-      const bal = await WalletService.getBalance();
-      const history = await PaymentService.getPaymentHistory(addr);
-
       setAddress(addr);
+      
+      const bal = await WalletService.getBalance();
       setBalance(bal);
-      setPayments(history);
+      
+      try {
+        const history = await PaymentService.getPaymentHistory(addr);
+        setPayments(history);
+      } catch (historyError) {
+        console.log('Could not load payment history');
+        setPayments({ sent: [], received: [] });
+      }
     } catch (error) {
       console.error('Load wallet error:', error);
     } finally {
