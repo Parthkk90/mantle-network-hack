@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Alert,
   Share,
+  Platform,
 } from 'react-native';
 import WalletService from '../services/WalletService';
 

@@ -7,6 +7,7 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import WalletService from '../services/WalletService';
 import PaymentService from '../services/PaymentService';

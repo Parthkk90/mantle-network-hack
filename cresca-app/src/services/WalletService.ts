@@ -10,7 +10,12 @@ class WalletService {
   private wallet: ethers.Wallet | null = null;
 
   constructor() {
-    this.provider = new ethers.JsonRpcProvider(MANTLE_SEPOLIA.rpcUrl);
+    try {
+      this.provider = new ethers.JsonRpcProvider(MANTLE_SEPOLIA.rpcUrl);
+    } catch (error) {
+      console.error('Provider initialization error:', error);
+      this.provider = new ethers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
+    }
   }
 
   async createWallet(): Promise<{ address: string; privateKey: string; mnemonic: string }> {
