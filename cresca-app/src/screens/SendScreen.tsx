@@ -14,6 +14,7 @@ import {
 import PaymentService from '../services/PaymentService';
 import WalletService from '../services/WalletService';
 import { MANTLE_SEPOLIA } from '../config/constants';
+import { COLORS } from '../theme/colors';
 
 export default function SendScreen({ navigation }: any) {
   const [recipient, setRecipient] = useState('');
@@ -104,32 +105,32 @@ export default function SendScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>{'<- BACK'}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Send Payment</Text>
+          <Text style={styles.title}>{'>> SEND_PAYMENT'}</Text>
         </View>
 
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>{parseFloat(balance).toFixed(4)} MNT</Text>
+          <Text style={styles.balanceLabel}>{'[AVAILABLE_BALANCE]'}</Text>
+          <Text style={styles.balanceAmount}>{balance} MNT</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Recipient Address</Text>
+            <Text style={styles.label}>{'>> RECIPIENT_ADDRESS'}</Text>
             <TextInput
               style={styles.input}
               value={recipient}
               onChangeText={setRecipient}
               placeholder="0x..."
-              placeholderTextColor="#999"
+              placeholderTextColor={COLORS.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount (MNT)</Text>
+            <Text style={styles.label}>{'>> AMOUNT (MNT)'}</Text>
             <TextInput
               style={styles.input}
               value={amount}
@@ -147,13 +148,13 @@ export default function SendScreen({ navigation }: any) {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Note (Optional)</Text>
+            <Text style={styles.label}>{'>> NOTE (OPTIONAL)'}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={note}
               onChangeText={setNote}
               placeholder="Payment for..."
-              placeholderTextColor="#999"
+              placeholderTextColor={COLORS.textMuted}
               multiline
               numberOfLines={3}
             />
@@ -165,9 +166,9 @@ export default function SendScreen({ navigation }: any) {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={COLORS.background} />
             ) : (
-              <Text style={styles.sendButtonText}>Send Payment</Text>
+              <Text style={styles.sendButtonText}>{'[ SEND_PAYMENT ]'}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -179,7 +180,7 @@ export default function SendScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -187,61 +188,68 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   backButton: {
     marginBottom: 16,
   },
   backText: {
-    fontSize: 16,
-    color: '#007AFF',
+    fontSize: 14,
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontWeight: '600',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   balanceCard: {
-    backgroundColor: '#fff',
-    margin: 24,
+    backgroundColor: COLORS.cardBackground,
+    margin: 16,
     padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   balanceLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    color: COLORS.textMuted,
     marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   balanceAmount: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#000',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   form: {
-    padding: 24,
+    padding: 16,
   },
   inputGroup: {
     marginBottom: 24,
     position: 'relative',
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#000',
+    color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
+    borderColor: COLORS.border,
+    borderRadius: 8,
     padding: 16,
-    fontSize: 16,
+    fontSize: 14,
+    color: COLORS.textWhite,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   textArea: {
     height: 100,
@@ -251,29 +259,34 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     bottom: 16,
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   maxButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+    color: COLORS.background,
+    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   sendButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     padding: 18,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   sendButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: COLORS.textMuted,
+    borderColor: COLORS.textMuted,
   },
   sendButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
 });

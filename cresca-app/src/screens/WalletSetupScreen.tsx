@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import WalletService from '../services/WalletService';
+import { COLORS } from '../theme/colors';
 
 export default function WalletSetupScreen({ onWalletReady }: { onWalletReady: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -74,8 +75,8 @@ export default function WalletSetupScreen({ onWalletReady }: { onWalletReady: ()
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Welcome to CRESCA</Text>
-        <Text style={styles.subtitle}>Setup your wallet to get started</Text>
+        <Text style={styles.title}>{'> CRESCA_'}</Text>
+        <Text style={styles.subtitle}>DECENTRALIZED_WALLET_PROTOCOL</Text>
 
         {!showImport ? (
           <View style={styles.content}>
@@ -85,9 +86,9 @@ export default function WalletSetupScreen({ onWalletReady }: { onWalletReady: ()
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={COLORS.background} />
               ) : (
-                <Text style={styles.primaryButtonText}>Create New Wallet</Text>
+                <Text style={styles.primaryButtonText}>{'[ CREATE_NEW_WALLET ]'}</Text>
               )}
             </TouchableOpacity>
 
@@ -96,18 +97,18 @@ export default function WalletSetupScreen({ onWalletReady }: { onWalletReady: ()
               onPress={() => setShowImport(true)}
               disabled={loading}
             >
-              <Text style={styles.secondaryButtonText}>Import Existing Wallet</Text>
+              <Text style={styles.secondaryButtonText}>{'[ IMPORT_EXISTING_WALLET ]'}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.content}>
-            <Text style={styles.label}>Private Key</Text>
+            <Text style={styles.label}>{'>> PRIVATE_KEY'}</Text>
             <TextInput
               style={styles.input}
               value={privateKey}
               onChangeText={setPrivateKey}
               placeholder="0x..."
-              placeholderTextColor="#999"
+              placeholderTextColor={COLORS.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
               multiline
@@ -119,9 +120,9 @@ export default function WalletSetupScreen({ onWalletReady }: { onWalletReady: ()
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={COLORS.background} />
               ) : (
-                <Text style={styles.primaryButtonText}>Import Wallet</Text>
+                <Text style={styles.primaryButtonText}>{'[ IMPORT_WALLET ]'}</Text>
               )}
             </TouchableOpacity>
 
@@ -130,7 +131,7 @@ export default function WalletSetupScreen({ onWalletReady }: { onWalletReady: ()
               onPress={() => setShowImport(false)}
               disabled={loading}
             >
-              <Text style={styles.secondaryButtonText}>Back</Text>
+              <Text style={styles.secondaryButtonText}>{'<- BACK'}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -142,7 +143,7 @@ export default function WalletSetupScreen({ onWalletReady }: { onWalletReady: ()
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -154,54 +155,67 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#000',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 13,
     textAlign: 'center',
-    color: '#666',
+    color: COLORS.textSecondary,
     marginBottom: 48,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   content: {
     width: '100%',
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#000',
+    color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 8,
     padding: 16,
-    fontSize: 14,
+    fontSize: 13,
     marginBottom: 24,
     minHeight: 100,
     textAlignVertical: 'top',
+    color: COLORS.textWhite,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     padding: 18,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   primaryButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   secondaryButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.cardBackground,
     padding: 18,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   secondaryButtonText: {
-    color: '#007AFF',
-    fontSize: 18,
-    fontWeight: '600',
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
 });

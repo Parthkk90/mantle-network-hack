@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import WalletService from '../services/WalletService';
+import { COLORS } from '../theme/colors';
 
 export default function ReceiveScreen({ navigation }: any) {
   const [address, setAddress] = useState('');
@@ -40,46 +41,43 @@ export default function ReceiveScreen({ navigation }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{'<- BACK'}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Receive Payment</Text>
+        <Text style={styles.title}>{'>> RECEIVE_PAYMENT'}</Text>
       </View>
 
       <View style={styles.content}>
         <View style={styles.qrPlaceholder}>
-          <Text style={styles.qrText}>QR Code</Text>
-          <Text style={styles.qrSubtext}>Scan to send MNT</Text>
+          <Text style={styles.qrText}>{'[ QR_CODE ]'}</Text>
+          <Text style={styles.qrSubtext}>SCAN_TO_SEND_MNT</Text>
         </View>
 
         <View style={styles.addressCard}>
-          <Text style={styles.addressLabel}>Your Wallet Address</Text>
+          <Text style={styles.addressLabel}>{'>> YOUR_WALLET_ADDRESS'}</Text>
           <Text style={styles.addressText}>{address}</Text>
         </View>
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionButton} onPress={handleCopyAddress}>
-            <Text style={styles.actionButtonText}>Copy Address</Text>
+            <Text style={styles.actionButtonText}>{'[ COPY_ADDRESS ]'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.actionButton, styles.shareButton]}
             onPress={handleShare}
           >
-            <Text style={styles.actionButtonText}>Share</Text>
+            <Text style={styles.actionButtonText}>{'[ SHARE ]'}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>How to receive MNT?</Text>
+          <Text style={styles.infoTitle}>{'>> HOW_TO_RECEIVE'}</Text>
           <Text style={styles.infoText}>
-            1. Share your wallet address with the sender{'\n'}
-            2. Or let them scan your QR code{'\n'}
-            3. Wait for the transaction to confirm{'\n'}
-            4. MNT will appear in your balance
+            {'1. Share wallet address\n2. Wait for confirmation\n3. MNT appears in balance'}
           </Text>
         </View>
 
-        <Text style={styles.networkInfo}>Network: Mantle Sepolia Testnet</Text>
+        <Text style={styles.networkInfo}>{'[MANTLE_SEPOLIA_TESTNET]'}</Text>
       </View>
     </View>
   );
@@ -88,24 +86,29 @@ export default function ReceiveScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   backButton: {
     marginBottom: 16,
   },
   backText: {
-    fontSize: 16,
-    color: '#007AFF',
+    fontSize: 14,
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontWeight: '600',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   content: {
     flex: 1,
@@ -116,42 +119,44 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     maxWidth: 300,
     alignSelf: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 2,
+    borderColor: COLORS.border,
   },
   qrText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: COLORS.primary,
     marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   qrSubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   addressCard: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   addressLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    color: COLORS.textMuted,
     marginBottom: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   addressText: {
-    fontSize: 14,
-    color: '#000',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 13,
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     lineHeight: 20,
   },
   actions: {
@@ -160,40 +165,49 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     marginHorizontal: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   shareButton: {
-    backgroundColor: '#34c759',
+    backgroundColor: COLORS.cardBackground,
+    borderColor: COLORS.primary,
   },
   actionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: COLORS.background,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   infoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   infoTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.primary,
     marginBottom: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   infoText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 22,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   networkInfo: {
     textAlign: 'center',
-    fontSize: 12,
-    color: '#999',
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
 });

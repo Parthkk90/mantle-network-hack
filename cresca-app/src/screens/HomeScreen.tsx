@@ -12,6 +12,7 @@ import {
 import WalletService from '../services/WalletService';
 import PaymentService from '../services/PaymentService';
 import { MANTLE_SEPOLIA } from '../config/constants';
+import { COLORS } from '../theme/colors';
 
 export default function HomeScreen({ navigation }: any) {
   const [address, setAddress] = useState('');
@@ -59,7 +60,7 @@ export default function HomeScreen({ navigation }: any) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -67,43 +68,67 @@ export default function HomeScreen({ navigation }: any) {
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          tintColor={COLORS.primary}
+        />
+      }
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>CRESCA</Text>
-        <Text style={styles.address}>{formatAddress(address)}</Text>
+      <View style={styles.headerSection}>
+        <View style={styles.networkBadge}>
+          <View style={styles.networkDot} />
+          <Text style={styles.networkText}>MANTLE_TESTNET</Text>
+        </View>
+        
+        <Text style={styles.balanceLabel}>TOTAL_BALANCE</Text>
+        <Text style={styles.balanceAmount}>${(parseFloat(balance) * 10).toFixed(2)}</Text>
+        
+        <View style={styles.balanceDetails}>
+          <Text style={styles.balanceMNT}>{parseFloat(balance).toFixed(6)} MNT</Text>
+          <Text style={styles.balanceChange}>↗ +1.44%</Text>
+        </View>
       </View>
 
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Total Balance</Text>
-        <Text style={styles.balanceAmount}>{parseFloat(balance).toFixed(4)} MNT</Text>
-        <Text style={styles.balanceUsd}>Mantle Sepolia Testnet</Text>
-      </View>
-
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionButton}
+      <View style={styles.actionsRow}>
+        <TouchableOpacity 
+          style={styles.actionCircle}
           onPress={() => navigation.navigate('Send')}
         >
-          <Text style={styles.actionIcon}>↑</Text>
-          <Text style={styles.actionText}>Send</Text>
+          <View style={styles.circleButton}>
+            <Text style={styles.circleIcon}>↑</Text>
+          </View>
+          <Text style={styles.circleLabel}>Send</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionButton}
+        <TouchableOpacity 
+          style={styles.actionCircle}
           onPress={() => navigation.navigate('Receive')}
         >
-          <Text style={styles.actionIcon}>↓</Text>
-          <Text style={styles.actionText}>Receive</Text>
+          <View style={styles.circleButton}>
+            <Text style={styles.circleIcon}>↓</Text>
+          </View>
+          <Text style={styles.circleLabel}>Receive</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionCircle}
+          onPress={() => navigation.navigate('MarketsTab')}
+        >
+          <View style={styles.circleButton}>
+            <Text style={styles.circleIcon}>⇄</Text>
+          </View>
+          <Text style={styles.circleLabel}>Swap</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.historySection}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={styles.sectionTitle}>{'>> RECENT_ACTIVITY'}</Text>
         
         {payments.sent.length === 0 && payments.received.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No transactions yet</Text>
+            <Text style={styles.emptyText}>{'[NO_TRANSACTIONS_FOUND]'}</Text>
           </View>
         ) : (
           <>
@@ -113,9 +138,9 @@ export default function HomeScreen({ navigation }: any) {
                   <Text style={styles.transactionIconText}>↑</Text>
                 </View>
                 <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionType}>Sent</Text>
+                  <Text style={styles.transactionType}>SENT</Text>
                   <Text style={styles.transactionAddress}>
-                    To: {formatAddress(payment.recipient)}
+                    {formatAddress(payment.recipient)}
                   </Text>
                   <Text style={styles.transactionNote}>{payment.note}</Text>
                 </View>
@@ -136,9 +161,9 @@ export default function HomeScreen({ navigation }: any) {
                   <Text style={styles.transactionIconText}>↓</Text>
                 </View>
                 <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionType}>Received</Text>
+                  <Text style={styles.transactionType}>RECEIVED</Text>
                   <Text style={styles.transactionAddress}>
-                    From: {formatAddress(payment.sender)}
+                    {formatAddress(payment.sender)}
                   </Text>
                   <Text style={styles.transactionNote}>{payment.note}</Text>
                 </View>
@@ -162,7 +187,7 @@ export default function HomeScreen({ navigation }: any) {
           console.log(`${MANTLE_SEPOLIA.explorerUrl}/address/${address}`);
         }}
       >
-        <Text style={styles.explorerButtonText}>View on Explorer</Text>
+        <Text style={styles.explorerButtonText}>{'[ VIEW_ON_EXPLORER ]'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -171,165 +196,205 @@ export default function HomeScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
   },
-  header: {
-    padding: 24,
+  headerSection: {
+    alignItems: 'center',
     paddingTop: 60,
-    backgroundColor: '#fff',
+    paddingBottom: 32,
+    backgroundColor: COLORS.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
-  },
-  address: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  balanceCard: {
-    backgroundColor: '#007AFF',
-    margin: 24,
-    padding: 32,
+  networkBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
+    marginBottom: 24,
+    gap: 8,
+  },
+  networkDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+  },
+  networkText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   balanceLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    color: COLORS.textMuted,
     marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    letterSpacing: 1,
   },
   balanceAmount: {
-    fontSize: 40,
+    fontSize: 48,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text,
     marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
-  balanceUsd: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  actions: {
+  balanceDetails: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    marginBottom: 32,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
     alignItems: 'center',
-    marginHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    gap: 12,
   },
-  actionIcon: {
+  balanceMNT: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  balanceChange: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 32,
+    paddingHorizontal: 32,
+  },
+  actionCircle: {
+    alignItems: 'center',
+  },
+  circleButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  circleIcon: {
     fontSize: 32,
-    marginBottom: 8,
+    color: COLORS.background,
+    fontWeight: 'bold',
   },
-  actionText: {
-    fontSize: 16,
+  circleLabel: {
+    fontSize: 14,
+    color: COLORS.text,
     fontWeight: '600',
-    color: '#000',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   historySection: {
-    backgroundColor: '#fff',
-    marginHorizontal: 24,
-    borderRadius: 16,
+    backgroundColor: COLORS.cardBackground,
+    marginHorizontal: 16,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#000',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   emptyState: {
     padding: 32,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   transactionItem: {
     flexDirection: 'row',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.border,
   },
   transactionIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#ffebee',
+    backgroundColor: 'rgba(255, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: COLORS.error,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   transactionIconReceived: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: 'rgba(0, 255, 65, 0.1)',
+    borderColor: COLORS.primary,
   },
   transactionIconText: {
     fontSize: 20,
+    color: COLORS.textWhite,
   },
   transactionDetails: {
     flex: 1,
   },
   transactionType: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
     marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   transactionAddress: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: COLORS.textSecondary,
     marginBottom: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   transactionNote: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   transactionAmount: {
     alignItems: 'flex-end',
   },
   transactionAmountText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#f44336',
+    color: COLORS.error,
     marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   transactionAmountReceived: {
-    color: '#4caf50',
+    color: COLORS.primary,
   },
   transactionDate: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   explorerButton: {
-    marginHorizontal: 24,
+    marginHorizontal: 16,
     marginBottom: 32,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   explorerButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
 });
