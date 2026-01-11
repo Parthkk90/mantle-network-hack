@@ -6,15 +6,24 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "updates": {
+      "enabled": false,
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#007AFF"
+      "backgroundColor": "#0a0e0a"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cresca.app"
+      "bundleIdentifier": "com.cresca.app",
+      "userInterfaceStyle": "dark",
+      "backgroundColor": "#0a0e0a"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +32,16 @@
       },
       "package": "com.cresca.app",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "screenOrientation": "portrait",
+      "userInterfaceStyle": "dark",
+      "navigationBar": {
+        "backgroundColor": "#0a0e0a"
+      },
+      "splash": {
+        "backgroundColor": "#0a0e0a",
+        "resizeMode": "contain"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

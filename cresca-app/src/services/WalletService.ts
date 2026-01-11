@@ -6,16 +6,23 @@ import { MANTLE_SEPOLIA } from '../config/constants';
 const PRIVATE_KEY = 'user_private_key';
 
 class WalletService {
-  private provider: ethers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider | null = null;
   private wallet: ethers.Wallet | null = null;
 
-  constructor() {
-    try {
-      this.provider = new ethers.JsonRpcProvider(MANTLE_SEPOLIA.rpcUrl);
-    } catch (error) {
-      console.error('Provider initialization error:', error);
-      this.provider = new ethers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
+  private getProvider(): ethers.JsonRpcProvider {
+    if (!this.provider) {
+      try {
+        this.provider = new ethers.JsonRpcProvider(MANTLE_SEPOLIA.rpcUrl, undefined, {
+          staticNetwork: true,
+        });
+      } catch (error) {
+        console.error('Provider initialization error:', error);
+        this.provider = new ethers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz', undefined, {
+          staticNetwork: true,
+        });
+      }
     }
+    return this.provider;
   }
 
   async createWallet(): Promise<{ address: string; privateKey: string; mnemonic: string }> {
@@ -30,7 +37,8 @@ class WalletService {
   }
 
   async importWallet(privateKey: string): Promise<string> {
-    const wallet = new ethers.Wallet(privateKey, this.provider);
+    const provider = this.getProvider();
+    const wallet = new ethers.Wallet(privateKey, provider);
     this.wallet = wallet;
     await SecureStore.setItemAsync(PRIVATE_KEY, privateKey);
     return wallet.address;
@@ -48,7 +56,8 @@ class WalletService {
       throw new Error('No wallet found');
     }
 
-    this.wallet = new ethers.Wallet(privateKey, this.provider);
+    const provider = this.getProvider();
+    this.wallet = new ethers.Wallet(privateKey, provider);
     return this.wallet;
   }
 
@@ -63,7 +72,8 @@ class WalletService {
     if (!this.wallet) {
       await this.loadWallet();
     }
-    const balance = await this.provider.getBalance(this.wallet!.address);
+    const provider = this.getProvider();
+    const balance = await provider.getBalance(this.wallet!.address);
     return ethers.formatEther(balance);
   }
 
@@ -72,8 +82,8 @@ class WalletService {
     this.wallet = null;
   }
 
-  getProvider(): ethers.JsonRpcProvider {
-    return this.provider;
+  getProviderInstance(): ethers.JsonRpcProvider {
+    return this.getProvider();
   }
 
   getWallet(): ethers.Wallet {
