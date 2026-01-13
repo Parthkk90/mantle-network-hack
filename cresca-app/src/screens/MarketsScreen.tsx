@@ -9,36 +9,55 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import BundleService, { Bundle } from '../services/BundleService';
 import { COLORS } from '../theme/colors';
 
+interface Token {
+  id: string;
+  name: string;
+  symbol: string;
+  price: number;
+  change24h: number;
+  marketCap: number;
+  volume24h: number;
+}
+
+// Mantle Network tokens
+const MANTLE_TOKENS: Token[] = [
+  { id: '1', name: 'Mantle', symbol: 'MNT', price: 1.07, change24h: 2.76, marketCap: 3490000000, volume24h: 125000000 },
+  { id: '2', name: 'Wrapped Mantle', symbol: 'WMNT', price: 1.07, change24h: 2.76, marketCap: 145000000, volume24h: 8500000 },
+  { id: '3', name: 'USD Coin', symbol: 'USDC', price: 1.00, change24h: 0.01, marketCap: 42000000000, volume24h: 6000000000 },
+  { id: '4', name: 'Tether', symbol: 'USDT', price: 0.99, change24h: -0.02, marketCap: 140000000000, volume24h: 95000000000 },
+  { id: '5', name: 'Wrapped Ethereum', symbol: 'WETH', price: 3254.12, change24h: 3.71, marketCap: 391000000000, volume24h: 15000000000 },
+  { id: '6', name: 'Wrapped Bitcoin', symbol: 'WBTC', price: 92068.68, change24h: 1.85, marketCap: 1820000000000, volume24h: 35000000000 },
+];
+
 export default function MarketsScreen({ navigation }: any) {
-  const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'apy' | 'tvl'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'change'>('name');
 
   useEffect(() => {
-    loadBundles();
+    loadTokens();
   }, [sortBy]);
 
-  const loadBundles = async () => {
+  const loadTokens = async () => {
     try {
-      const allBundles = await BundleService.getAllBundles();
+      await new Promise((resolve) => setTimeout(resolve, 300));
       
-      let sortedBundles = [...allBundles];
+      let sortedTokens = [...MANTLE_TOKENS];
       
-      if (sortBy === 'apy') {
-        sortedBundles.sort((a, b) => parseFloat(b.apy) - parseFloat(a.apy));
-      } else if (sortBy === 'tvl') {
-        sortedBundles.sort((a, b) => parseFloat(b.tvl) - parseFloat(a.tvl));
+      if (sortBy === 'price') {
+        sortedTokens.sort((a, b) => b.price - a.price);
+      } else if (sortBy === 'change') {
+        sortedTokens.sort((a, b) => b.change24h - a.change24h);
       } else {
-        sortedBundles.sort((a, b) => a.name.localeCompare(b.name));
+        sortedTokens.sort((a, b) => a.name.localeCompare(b.name));
       }
       
-      setBundles(sortedBundles);
+      setTokens(sortedTokens);
     } catch (error) {
-      console.error('Load bundles error:', error);
+      console.error('Load tokens error:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,7 +66,7 @@ export default function MarketsScreen({ navigation }: any) {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadBundles();
+    loadTokens();
   };
 
   if (loading) {
@@ -61,8 +80,8 @@ export default function MarketsScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{'>> INVESTMENT_BUNDLES'}</Text>
-        <Text style={styles.subtitle}>CURATED_PORTFOLIOS</Text>
+        <Text style={styles.title}>{'>> MARKETS'}</Text>
+        <Text style={styles.subtitle}>MANTLE_NETWORK_ASSETS</Text>
         <View style={styles.sortContainer}>
           <TouchableOpacity
             style={[styles.sortButton, sortBy === 'name' && styles.sortButtonActive]}
@@ -71,16 +90,16 @@ export default function MarketsScreen({ navigation }: any) {
             <Text style={[styles.sortText, sortBy === 'name' && styles.sortTextActive]}>A-Z</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.sortButton, sortBy === 'apy' && styles.sortButtonActive]}
-            onPress={() => setSortBy('apy')}
+            style={[styles.sortButton, sortBy === 'price' && styles.sortButtonActive]}
+            onPress={() => setSortBy('price')}
           >
-            <Text style={[styles.sortText, sortBy === 'apy' && styles.sortTextActive]}>APY</Text>
+            <Text style={[styles.sortText, sortBy === 'price' && styles.sortTextActive]}>PRICE</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.sortButton, sortBy === 'tvl' && styles.sortButtonActive]}
-            onPress={() => setSortBy('tvl')}
+            style={[styles.sortButton, sortBy === 'change' && styles.sortButtonActive]}
+            onPress={() => setSortBy('change')}
           >
-            <Text style={[styles.sortText, sortBy === 'tvl' && styles.sortTextActive]}>TVL</Text>
+            <Text style={[styles.sortText, sortBy === 'change' && styles.sortTextActive]}>CHG</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -95,38 +114,32 @@ export default function MarketsScreen({ navigation }: any) {
           />
         }
       >
-        {bundles.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>{'[NO_BUNDLES_AVAILABLE]'}</Text>
-            <Text style={styles.emptyText}>
-              NO_CURATED_BUNDLES_FOUND
-            </Text>
-          </View>
-        ) : (
-          bundles.map((bundle) => (
-            <TouchableOpacity
-              key={bundle.id}
-              style={styles.tokenCard}
-              onPress={() => navigation.navigate('BundleDetails', { bundle })}
-            >
-              <View style={styles.tokenIcon}>
-                <Text style={styles.tokenInitial}>{bundle.symbol.charAt(0)}</Text>
-              </View>
-              
-              <View style={styles.tokenInfo}>
-                <Text style={styles.tokenName}>{bundle.name.toUpperCase()}</Text>
-                <Text style={styles.tokenSymbol}>{bundle.composition}</Text>
-              </View>
+        {tokens.map((token) => (
+          <TouchableOpacity
+            key={token.id}
+            style={styles.tokenCard}
+            onPress={() => navigation.navigate('TokenDetails', { token })}
+          >
+            <View style={styles.tokenIcon}>
+              <Text style={styles.tokenInitial}>{token.symbol.charAt(0)}</Text>
+            </View>
+            
+            <View style={styles.tokenInfo}>
+              <Text style={styles.tokenName}>{token.name.toUpperCase()}</Text>
+              <Text style={styles.tokenSymbol}>{token.symbol}</Text>
+            </View>
 
-              <View style={styles.tokenPrice}>
-                <Text style={styles.priceValue}>{bundle.apy}% APY</Text>
-                <Text style={styles.priceChange}>
-                  TVL: {bundle.tvl} MNT
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
+            <View style={styles.tokenPrice}>
+              <Text style={styles.priceValue}>${token.price.toLocaleString()}</Text>
+              <Text style={[
+                styles.priceChange,
+                token.change24h >= 0 ? styles.priceChangePositive : styles.priceChangeNegative
+              ]}>
+                {token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(2)}%
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </View>
   );
@@ -154,6 +167,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.primary,
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  subtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
     marginBottom: 16,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },

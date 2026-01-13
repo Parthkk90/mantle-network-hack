@@ -30,7 +30,9 @@ const DarkTheme = {
     card: COLORS.cardBackground,
     text: COLORS.text,
     border: COLORS.border,
+    notification: COLORS.primary,
   },
+  dark: true,
 };
 
 function TabIcon({ name, color, focused }: { name: string; color: string; focused: boolean }) {
@@ -76,6 +78,7 @@ function MainTabs() {
           fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
         },
       }}
+      sceneContainerStyle={{ backgroundColor: COLORS.background }}
     >
       <Tab.Screen
         name="HomeTab"
@@ -181,7 +184,10 @@ export default function App() {
   return (
     <NavigationContainer theme={DarkTheme}>
       <StatusBar style="light" />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator 
+        screenOptions={{ headerShown: false }}
+        screenContainerStyle={{ backgroundColor: COLORS.background }}
+      >
         {!isWalletReady ? (
           <Stack.Screen name="WalletSetup">
             {(props) => (
