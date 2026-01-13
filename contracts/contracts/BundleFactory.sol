@@ -32,6 +32,9 @@ contract BundleFactory is Ownable, ReentrancyGuard {
     address[] public allBundles;
     mapping(address => address[]) public userBundles;
     
+    // Investment tracking
+    mapping(address => mapping(address => uint256)) public userInvestments; // bundleToken => user => amount
+    
     // Events
     event BundleCreated(
         address indexed bundleToken,
@@ -41,6 +44,8 @@ contract BundleFactory is Ownable, ReentrancyGuard {
         string name
     );
     event BundleDeactivated(address indexed bundleToken);
+    event Investment(address indexed bundleToken, address indexed user, uint256 amount);
+    event Withdrawal(address indexed bundleToken, address indexed user, uint256 amount);
     
     // Constants
     uint256 public constant MAX_TOKENS_PER_BUNDLE = 20;
@@ -51,7 +56,7 @@ contract BundleFactory is Ownable, ReentrancyGuard {
      * @dev Constructor
      * @param _vaultManager Address of the vault manager contract
      */
-    constructor(address _vaultManager) Ownable(msg.sender) {
+    constructor(address payable _vaultManager) Ownable(msg.sender) {
         require(_vaultManager != address(0), "Invalid vault manager");
         vaultManager = VaultManager(_vaultManager);
     }
@@ -206,9 +211,76 @@ contract BundleFactory is Ownable, ReentrancyGuard {
      * @dev Update vault manager (only owner)
      * @param newVaultManager Address of new vault manager
      */
-    function setVaultManager(address newVaultManager) external onlyOwner {
+    function setVaultManager(address payable newVaultManager) external onlyOwner {
         require(newVaultManager != address(0), "Invalid address");
         vaultManager = VaultManager(newVaultManager);
     }
+    
+    /**
+     * @dev Invest in a bundle with native token (MNT)
+     * @param bundleToken Address of the bundle token to invest in
+     * @param amount Amount to invest (for validation, must match msg.value)
+     */
+    function investInBundle(address bundleToken, uint256 amount) 
+        external 
+        payable 
+        nonReentrant 
+    {
+        require(bundles[bundleToken].bundleToken != address(0), "Bundle does not exist");
+        require(bundles[bundleToken].isActive, "Bundle is not active");
+        require(msg.value > 0, "Investment amount must be > 0");
+        require(msg.value >= minInvestmentAmount, "Below minimum investment");
+        require(msg.value == amount, "Amount mismatch");
+        
+        // Track user investment
+        userInvestments[bundleToken][msg.sender] += msg.value;
+        
+        // Transfer funds to vault manager
+        (bool success, ) = address(vaultManager).call{value: msg.value}("");
+        require(success, "Transfer to vault failed");
+        
+        emit Investment(bundleToken, msg.sender, msg.value);
+    }
+    
+    /**
+     * @dev Get user's investment in a specific bundle
+     * @param bundleToken Address of the bundle token
+     * @param user Address of the user
+     * @return Investment amount
+     */
+    function getUserInvestment(address bundleToken, address user) 
+        external 
+        view 
+        returns (uint256) 
+    {
+        return userInvestments[bundleToken][user];
+    }
+    
+    /**
+     * @dev Withdraw investment from a bundle
+     * @param bundleToken Address of the bundle token
+     * @param amount Amount to withdraw
+     */
+    function withdrawFromBundle(address bundleToken, uint256 amount) 
+        external 
+        nonReentrant 
+    {
+        require(bundles[bundleToken].bundleToken != address(0), "Bundle does not exist");
+        require(userInvestments[bundleToken][msg.sender] >= amount, "Insufficient investment");
+        
+        // Update investment tracking
+        userInvestments[bundleToken][msg.sender] -= amount;
+        
+        // Transfer funds from vault back to user
+        (bool success, ) = address(vaultManager).call(
+            abi.encodeWithSignature(
+                "withdrawToUser(address,uint256)",
+                msg.sender,
+                amount
+            )
+        );
+        require(success, "Withdrawal failed");
+        
+        emit Withdrawal(bundleToken, msg.sender, amount);
+    }
 }
-

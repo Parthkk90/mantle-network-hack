@@ -19,6 +19,9 @@ contract VaultManager is Ownable, ReentrancyGuard {
     mapping(address => address[]) public bundleTokens;
     address[] public allBundles;
     
+    // Bundle factory (allowed to call certain functions)
+    address public bundleFactory;
+    
     // Swap router for rebalancing
     address public swapRouter;
     
@@ -36,6 +39,22 @@ contract VaultManager is Ownable, ReentrancyGuard {
     constructor(address _swapRouter) Ownable(msg.sender) {
         require(_swapRouter != address(0), "Invalid swap router");
         swapRouter = _swapRouter;
+    }
+    
+    /**
+     * @dev Set bundle factory address (only owner)
+     * @param _bundleFactory Address of bundle factory
+     */
+    function setBundleFactory(address _bundleFactory) external onlyOwner {
+        require(_bundleFactory != address(0), "Invalid factory address");
+        bundleFactory = _bundleFactory;
+    }
+    
+    /**
+     * @dev Receive function to accept ETH
+     */
+    receive() external payable {
+        // Accept ETH deposits
     }
     
     /**
@@ -243,5 +262,28 @@ contract VaultManager is Ownable, ReentrancyGuard {
     ) external onlyOwner {
         require(to != address(0), "Invalid recipient");
         IERC20(token).safeTransfer(to, amount);
+    }
+    
+    /**
+     * @dev Withdraw ETH to user (called by BundleFactory)
+     * @param to Recipient address
+     * @param amount Amount to withdraw
+     */
+    function withdrawToUser(address to, uint256 amount) external nonReentrant {
+        require(msg.sender == bundleFactory, "Only factory can call");
+        require(to != address(0), "Invalid recipient");
+        require(amount > 0, "Amount must be > 0");
+        require(address(this).balance >= amount, "Insufficient balance");
+        
+        (bool success, ) = to.call{value: amount}("");
+        require(success, "ETH transfer failed");
+    }
+    
+    /**
+     * @dev Get ETH balance in vault
+     * @return Balance in wei
+     */
+    function getETHBalance() external view returns (uint256) {
+        return address(this).balance;
     }
 }
