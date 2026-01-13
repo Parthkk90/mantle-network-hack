@@ -52,10 +52,12 @@ export default function BundleDetailsScreen({ route, navigation }: any) {
   const executeTrade = async () => {
     setLoading(true);
     try {
-      // Invest in bundle using BundleService
+      // Invest in bundle using BundleService with leverage and position
       const txHash = await BundleService.investInBundle(
         bundle.address || bundle.id,
-        amount
+        amount,
+        leverage,
+        position.toLowerCase() as 'long' | 'short'
       );
       
       Alert.alert(

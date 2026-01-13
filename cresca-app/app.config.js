@@ -1,0 +1,52 @@
+module.exports = {
+  expo: {
+    name: "CRESCA",
+    slug: "cresca-app",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/icon.png",
+    userInterfaceStyle: "light",
+    scheme: "cresca",
+    splash: {
+      image: "./assets/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#0a0e0a"
+    },
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.cresca.app",
+      userInterfaceStyle: "dark",
+      backgroundColor: "#0a0e0a"
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#007AFF"
+      },
+      package: "com.cresca.app",
+      edgeToEdgeEnabled: true,
+      predictiveBackGestureEnabled: false,
+      screenOrientation: "portrait",
+      userInterfaceStyle: "dark",
+      navigationBar: {
+        backgroundColor: "#0a0e0a"
+      },
+      splash: {
+        backgroundColor: "#0a0e0a",
+        resizeMode: "contain"
+      }
+    },
+    web: {
+      favicon: "./assets/favicon.png"
+    },
+    extra: {
+      network: "mantle-sepolia",
+      chainId: 5003,
+      contractAddress: "0x7D7A1bbD55c6A2e1F23cD711B319F377D09D93f8"
+    },
+    // Completely disable updates
+    updates: {
+      enabled: false
+    }
+  }
+};

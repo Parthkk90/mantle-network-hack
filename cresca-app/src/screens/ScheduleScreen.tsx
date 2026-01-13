@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   Alert,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS } from '../theme/colors';
+import PaymentSchedulerService, { ScheduleType, ScheduleStatus, Schedule } from '../services/PaymentSchedulerService';
 
 interface ScheduledPayment {
   id: string;
@@ -29,15 +31,32 @@ export default function ScheduleScreen({ navigation }: any) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [scheduledPayments, setScheduledPayments] = useState<Schedule[]>([]);
   const [newPayment, setNewPayment] = useState({
     recipient: '',
     amount: '',
-    time: '12:00',
+    time: '12:00 PM',
     frequency: 'once' as 'once' | 'daily' | 'weekly' | 'monthly',
     note: '',
   });
 
-  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
+  // Load schedules from blockchain on mount
+  useEffect(() => {
+    loadSchedules();
+  }, []);
+
+  const loadSchedules = async () => {
+    try {
+      setLoading(true);
+      const schedules = await PaymentSchedulerService.getUserSchedules();
+      setScheduledPayments(schedules);
+    } catch (error) {
+      console.error('Error loading schedules:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -79,10 +98,11 @@ export default function ScheduleScreen({ navigation }: any) {
   const hasScheduledPayment = (day: number | null) => {
     if (!day) return false;
     return scheduledPayments.some(payment => {
+      const paymentDate = payment.startTime;
       return (
-        payment.date.getDate() === day &&
-        payment.date.getMonth() === currentMonth.getMonth() &&
-        payment.date.getFullYear() === currentMonth.getFullYear()
+        paymentDate.getDate() === day &&
+        paymentDate.getMonth() === currentMonth.getMonth() &&
+        paymentDate.getFullYear() === currentMonth.getFullYear()
       );
     });
   };
@@ -106,56 +126,142 @@ export default function ScheduleScreen({ navigation }: any) {
     setShowCreateModal(true);
   };
 
-  const createScheduledPayment = () => {
+  const createScheduledPayment = async () => {
     if (!selectedDate || !newPayment.recipient || !newPayment.amount) {
       Alert.alert('ERROR', 'Please fill in all required fields');
       return;
     }
 
-    const payment: ScheduledPayment = {
-      id: Date.now().toString(),
-      recipient: newPayment.recipient,
-      amount: newPayment.amount,
-      date: selectedDate,
-      time: newPayment.time,
-      frequency: newPayment.frequency,
-      note: newPayment.note,
-      active: true,
-      executed: 0,
-      total: newPayment.frequency === 'once' ? 1 : 12,
-    };
+    setLoading(true);
+    try {
+      // Parse time and set on selected date (handle 12-hour format with AM/PM)
+      const timeMatch = newPayment.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (!timeMatch) {
+        Alert.alert('Invalid Time', 'Please enter time in format: HH:MM AM/PM (e.g., 3:30 PM)', [{ text: 'OK', onPress: () => setLoading(false) }]);
+        return;
+      }
+      
+      let hours = parseInt(timeMatch[1]);
+      const minutes = parseInt(timeMatch[2]);
+      const meridiem = timeMatch[3].toUpperCase();
+      
+      // Convert to 24-hour format
+      if (meridiem === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (meridiem === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      const scheduleDate = new Date(selectedDate);
+      scheduleDate.setHours(hours, minutes, 0, 0);
 
-    setScheduledPayments([...scheduledPayments, payment]);
-    setShowCreateModal(false);
-    setNewPayment({
-      recipient: '',
-      amount: '',
-      time: '12:00',
-      frequency: 'once',
-      note: '',
-    });
-    Alert.alert('SUCCESS', 'Payment scheduled successfully');
+      // Validate time is in the future (at least 3 minutes to allow for transaction time + buffer)
+      const now = new Date();
+      const minScheduleTime = new Date(now.getTime() + 180000); // 3 minutes from now
+      
+      if (scheduleDate <= minScheduleTime) {
+        const suggested = new Date(now.getTime() + 240000); // 4 minutes from now
+        const suggestedTime = suggested.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        Alert.alert(
+          'Invalid Time',
+          `Please schedule at least 3 minutes in the future. Try ${suggestedTime} or later.`,
+          [{ text: 'OK', onPress: () => setLoading(false) }]
+        );
+        return;
+      }
+
+      // Map frequency to schedule type
+      let scheduleType = ScheduleType.ONE_TIME;
+      let interval = 0;
+      let maxExecutions = 1;
+
+      if (newPayment.frequency === 'daily') {
+        scheduleType = ScheduleType.RECURRING;
+        interval = 86400; // 1 day in seconds
+        maxExecutions = 0; // unlimited
+      } else if (newPayment.frequency === 'weekly') {
+        scheduleType = ScheduleType.RECURRING;
+        interval = 604800; // 7 days in seconds
+        maxExecutions = 0;
+      } else if (newPayment.frequency === 'monthly') {
+        scheduleType = ScheduleType.RECURRING;
+        interval = 2592000; // 30 days in seconds
+        maxExecutions = 12; // 1 year
+      }
+
+      // Create schedule on blockchain
+      const scheduleId = await PaymentSchedulerService.createSchedule(
+        scheduleType,
+        '0x6fe0A990936C4ceAb46f8f2BfDDF02CfE2129Ff8', // WMNT (Wrapped MNT)
+        newPayment.recipient,
+        newPayment.amount,
+        interval,
+        scheduleDate,
+        maxExecutions
+      );
+
+      Alert.alert('SUCCESS', `Payment scheduled on blockchain! ID: ${scheduleId}`);
+      
+      // Reload schedules from blockchain
+      await loadSchedules();
+      
+      setShowCreateModal(false);
+      setNewPayment({
+        recipient: '',
+        amount: '',
+        time: '12:00 PM',
+        frequency: 'once',
+        note: '',
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create schedule on blockchain');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const togglePayment = (id: string) => {
-    setScheduledPayments(payments =>
-      payments.map(p =>
-        p.id === id ? { ...p, active: !p.active } : p
-      )
-    );
+  const togglePayment = async (id: string) => {
+    setLoading(true);
+    try {
+      const schedule = scheduledPayments.find(s => s.id === id);
+      if (!schedule) return;
+
+      if (schedule.status === ScheduleStatus.ACTIVE) {
+        await PaymentSchedulerService.pauseSchedule(id);
+        Alert.alert('Paused', 'Schedule paused successfully on blockchain');
+      } else if (schedule.status === ScheduleStatus.PAUSED) {
+        await PaymentSchedulerService.resumeSchedule(id);
+        Alert.alert('Resumed', 'Schedule resumed successfully on blockchain');
+      }
+
+      await loadSchedules();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to toggle schedule');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const deletePayment = (id: string) => {
     Alert.alert(
       'DELETE SCHEDULE',
-      'Are you sure you want to delete this scheduled payment?',
+      'This will cancel the scheduled payment on the blockchain. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setScheduledPayments(payments => payments.filter(p => p.id !== id));
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await PaymentSchedulerService.cancelSchedule(id);
+              await loadSchedules();
+              Alert.alert('Deleted', 'Schedule cancelled successfully on blockchain');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to cancel schedule');
+            } finally {
+              setLoading(false);
+            }
           },
         },
       ]
@@ -166,16 +272,23 @@ export default function ScheduleScreen({ navigation }: any) {
     if (!selectedDate) return scheduledPayments;
     
     return scheduledPayments.filter(payment => {
+      const paymentDate = payment.startTime;
       return (
-        payment.date.getDate() === selectedDate.getDate() &&
-        payment.date.getMonth() === selectedDate.getMonth() &&
-        payment.date.getFullYear() === selectedDate.getFullYear()
+        paymentDate.getDate() === selectedDate.getDate() &&
+        paymentDate.getMonth() === selectedDate.getMonth() &&
+        paymentDate.getFullYear() === selectedDate.getFullYear()
       );
     });
   };
 
   return (
     <View style={styles.container}>
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Processing...</Text>
+        </View>
+      )}
       <View style={styles.header}>
         <Text style={styles.title}>Schedule</Text>
         <Text style={styles.walletId}>ID: 0x6dfe...F41C</Text>
@@ -260,37 +373,34 @@ export default function ScheduleScreen({ navigation }: any) {
                   <TouchableOpacity
                     style={[
                       styles.statusBadge,
-                      payment.active ? styles.statusBadgeActive : styles.statusBadgeInactive
+                      payment.status === ScheduleStatus.ACTIVE ? styles.statusBadgeActive : styles.statusBadgeInactive
                     ]}
                     onPress={() => togglePayment(payment.id)}
                   >
                     <Text style={[
                       styles.statusText,
-                      payment.active ? styles.statusTextActive : styles.statusTextInactive
+                      payment.status === ScheduleStatus.ACTIVE ? styles.statusTextActive : styles.statusTextInactive
                     ]}>
-                      {payment.active ? 'Active' : 'Inactive'}
+                      {PaymentSchedulerService.getStatusText(payment.status)}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.paymentDetails}>
                   <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>INTERVAL</Text>
-                    <Text style={styles.detailValue}>{payment.frequency.toUpperCase()}</Text>
+                    <Text style={styles.detailLabel}>TYPE</Text>
+                    <Text style={styles.detailValue}>{PaymentSchedulerService.getTypeText(payment.scheduleType)}</Text>
                   </View>
                   <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>PROGRESS</Text>
-                    <Text style={styles.detailValue}>{payment.executed}/{payment.total}</Text>
+                    <Text style={styles.detailLabel}>EXECUTIONS</Text>
+                    <Text style={styles.detailValue}>{payment.executionCount}/{payment.maxExecutions === 0 ? '∞' : payment.maxExecutions}</Text>
                   </View>
                 </View>
 
                 <View style={styles.paymentInfo}>
                   <Text style={styles.paymentDate}>
-                    Next: {payment.date.toLocaleDateString()} at {payment.time}
+                    Next: {PaymentSchedulerService.getNextExecutionTime(payment)?.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) || 'Completed'}
                   </Text>
-                  {payment.note && (
-                    <Text style={styles.paymentNote}>{payment.note}</Text>
-                  )}
                 </View>
 
                 <TouchableOpacity
@@ -360,10 +470,10 @@ export default function ScheduleScreen({ navigation }: any) {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Time</Text>
+                <Text style={styles.formLabel}>Time (12-hour format)</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="12:00"
+                  placeholder="12:00 PM"
                   placeholderTextColor={COLORS.textMuted}
                   value={newPayment.time}
                   onChangeText={(text) => setNewPayment({...newPayment, time: text})}
@@ -424,6 +534,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '600',
   },
   header: {
     padding: 16,

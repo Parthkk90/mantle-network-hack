@@ -1,0 +1,27 @@
+{
+  "name": "cresca-payment-keeper",
+  "version": "1.0.0",
+  "description": "Automated keeper service for scheduled payments on Mantle Network",
+  "main": "keeper.js",
+  "scripts": {
+    "start": "node keeper.js",
+    "dev": "nodemon keeper.js",
+    "test": "node keeper.js --dry-run"
+  },
+  "keywords": [
+    "mantle",
+    "keeper",
+    "automation",
+    "scheduled-payments",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.13.4",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

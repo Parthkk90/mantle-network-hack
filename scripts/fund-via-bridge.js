@@ -1,78 +1,45 @@
 /**
- * Alternative: Bridge from Sepolia ETH (easier to get) to Mantle Testnet
- * Many developers have Sepolia ETH from other projects
+ * Get Mantle Testnet MNT - Simple Version
  */
 
 const { ethers } = require('ethers');
 require('dotenv').config();
 
-const MANTLE_BRIDGE_ADDRESS = '0x676A795fe6E43C17c668de16730c3F690FEB7120'; // Testnet bridge
-const YOUR_ADDRESS = '0x50921Cd1D05a3C7C95B75C6fa1008761C59eb85d';
-
-async function bridgeFromSepolia() {
-    console.log('🌉 Bridging from Sepolia to Mantle Testnet\n');
-    
-    // Check if user has Sepolia ETH
-    const sepoliaProvider = new ethers.JsonRpcProvider('https://rpc.sepolia.org');
-    
-    try {
-        const balance = await sepoliaProvider.getBalance(YOUR_ADDRESS);
-        const eth = ethers.formatEther(balance);
-        
-        console.log(`Sepolia ETH Balance: ${eth} ETH`);
-        
-        if (parseFloat(eth) > 0.01) {
-            console.log('\n✅ You have Sepolia ETH!');
-            console.log('\n📍 BRIDGE INSTRUCTIONS:');
-            console.log('1. Visit: https://bridge.testnet.mantle.xyz/');
-            console.log('2. Connect your wallet');
-            console.log('3. Bridge 0.01 ETH from Sepolia → Mantle Testnet');
-            console.log('4. Wait 5-10 minutes');
-            console.log('5. You\'ll receive MNT on Mantle Testnet\n');
-            
-            console.log('Or use this direct link:');
-            console.log(`https://bridge.testnet.mantle.xyz/?from=sepolia&to=mantle&amount=0.01`);
-        } else {
-            console.log('\n❌ No Sepolia ETH. Get some from:');
-            console.log('- https://sepoliafaucet.com/');
-            console.log('- https://www.infura.io/faucet/sepolia');
-            console.log('- https://faucet.quicknode.com/ethereum/sepolia');
-        }
-    } catch (error) {
-        console.error('Error checking Sepolia balance:', error.message);
-    }
-}
+const YOUR_ADDRESS = process.env.WALLET_ADDRESS || '0x50921Cd1D05a3C7C95B75C6fa1008761C59eb85d';
 
 async function checkMantleBalance() {
-    const mantleProvider = new ethers.JsonRpcProvider('https://rpc.testnet.mantle.xyz');
+    const provider = new ethers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
     
     try {
-        const balance = await mantleProvider.getBalance(YOUR_ADDRESS);
+        const balance = await provider.getBalance(YOUR_ADDRESS);
         const mnt = ethers.formatEther(balance);
         
         console.log(`\n💰 Mantle Testnet Balance: ${mnt} MNT`);
-        
-        if (parseFloat(mnt) > 0) {
-            console.log('✅ Ready to deploy!\n');
-            return true;
-        }
+        return parseFloat(mnt) > 0.01;
     } catch (error) {
-        console.error('Error checking Mantle balance:', error.message);
+        console.error('Error:', error.message);
+        return false;
     }
-    
-    return false;
 }
 
 async function main() {
-    console.log('🔄 Alternative Funding via Bridge\n');
+    console.log('🔄 Get Mantle Testnet MNT\n');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     
-    // Check current Mantle balance
     const hasFunds = await checkMantleBalance();
     
     if (!hasFunds) {
-        // Check Sepolia balance and provide bridge instructions
-        await bridgeFromSepolia();
+        console.log('\n📍 GET MNT FROM FAUCET:');
+        console.log('1. Visit: https://faucet.sepolia.mantle.xyz/');
+        console.log('2. Enter your address:', YOUR_ADDRESS);
+        console.log('3. Click "Request MNT"');
+        console.log('4. Wait 30 seconds\n');
+        
+        console.log('Alternative faucets:');
+        console.log('- https://faucet.quicknode.com/mantle/sepolia');
+        console.log('- https://thirdweb.com/mantle-sepolia-testnet/faucet\n');
+    } else {
+        console.log('✅ You have MNT! Ready to build.\n');
     }
 }
 

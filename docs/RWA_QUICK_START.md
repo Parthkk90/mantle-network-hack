@@ -221,7 +221,7 @@ npx hardhat coverage
 
 ## Contract Addresses
 
-### Mantle Testnet
+### Mantle Sepolia Testnet (Deployed ✅)
 ```
 KYCRegistry:        TBD
 RWAVault:           TBD

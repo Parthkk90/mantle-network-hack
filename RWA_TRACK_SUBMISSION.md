@@ -2,7 +2,7 @@
 
 ## 🎯 Track Prize: RWA / RealFi
 
-Cresca is a comprehensive DeFi platform on Mantle Network, enhanced with complete Real-World Asset tokenization infrastructure.
+Cresca is a DeFi wallet on Mantle Network with Real-World Asset tokenization infrastructure.
 
 ## 📋 Judging Criteria Coverage
 
@@ -116,28 +116,16 @@ Cresca is a comprehensive DeFi platform on Mantle Network, enhanced with complet
 
 ## 🎨 Architecture
 
+Simple L2 stack:
+
 ```
-┌─────────────────────────────────────────────┐
-│         User Interface (Mobile/Web)          │
-└─────────────────┬───────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────┐
-│              RWA / RealFi Layer              │
-│                                               │
-│  RWAToken    KYCRegistry    RWAVault         │
-│  YieldDistributor    InvoiceFactoring        │
-└─────────────────┬───────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────┐
-│         Existing Cresca DeFi Layer           │
-│                                               │
-│  BundleFactory  SwapRouter  PaymentScheduler │
-└─────────────────┬───────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────┐
-│            Mantle Network (L2)               │
-│         Low Fees, High Throughput            │
-└──────────────────────────────────────────────┘
+React Native Wallet
+    ↓
+ethers.js
+    ↓
+Mantle Network
+    ↓
+RWA Smart Contracts
 ```
 
 ## 💼 Use Cases
@@ -208,14 +196,10 @@ Business: $500k outstanding invoices
 
 ## 🚀 Deployment
 
-### Prerequisites
+### Deploy to Mantle Testnet
 ```bash
-npm install
-```
-
-### Deploy to Mantle Network
-```bash
-npx hardhat run contracts/scripts/deploy-rwa.ts --network mantle
+cd contracts
+npx hardhat run scripts/deploy-rwa.ts --network mantleSepolia
 ```
 
 ### Contracts Deployed
@@ -279,7 +263,7 @@ npx hardhat test test/KYCRegistry.test.ts
 npx hardhat test test/YieldDistributor.test.ts
 ```
 
-## 🔗 Contract Addresses (Mantle Testnet)
+## 🔗 Contract Addresses (Mantle Sepolia)
 
 ```
 KYCRegistry:       0x...

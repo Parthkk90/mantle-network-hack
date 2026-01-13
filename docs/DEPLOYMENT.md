@@ -23,6 +23,19 @@ Edit `.env` and add:
 
 ## Deployment Steps
 
+### Step 0: Check Current Deployment Status
+```bash
+cd contracts
+npx hardhat run scripts/checkBalance.ts --network mantleSepolia
+```
+
+**Current Status (as of January 13, 2026):**
+- ✅ Bundle System v2: VaultManager, BundleFactory (with investment support)
+- ✅ WMNT Token: 0x6fe0A990936C4ceAb46f8f2BfDDF02CfE2129Ff8
+- ✅ PaymentScheduler: 0xfAc3A13b1571A227CF36878fc46E07B56021cd7B
+- ✅ Keeper Service: Running and operational
+- ✅ RWA Contracts: KYCRegistry, RWAVault, RWAToken, YieldDistributor
+
 ### Step 1: Compile Contracts
 ```bash
 cd contracts
@@ -40,7 +53,11 @@ Ensure all tests pass and coverage is >95%.
 
 ### Step 3: Deploy to Mantle Testnet
 ```bash
-npx hardhat run scripts/deploy.ts --network mantle-testnet
+# For remaining RWA contracts
+npx hardhat run scripts/deployRemainingRWA.ts --network mantleSepolia
+
+# Or deploy all from scratch
+npx hardhat run scripts/deployAll.ts --network mantleSepolia
 ```
 
 Save the deployed contract addresses!
@@ -143,25 +160,22 @@ npx hardhat coverage
 
 ## Next Steps After Deployment
 
-1. **Test Bundle Creation**
-   - Create a test bundle with mock tokens
-   - Verify bundle tokens are minted
-   - Test deposit and withdrawal
+1. **Test Bundle Creation & Investment**
+   - Create a test bundle: `npx hardhat run scripts/create-test-bundle.ts --network mantleSepolia`
+   - Test investment: `npx hardhat run scripts/test-investment.ts --network mantleSepolia`
+   - Verify bundle on explorer
 
-2. **Test Swaps**
-   - Register test DEXs
-   - Execute test swaps
-   - Verify best price routing
+2. **Test Scheduled Payments**
+   - Authorize keeper: `npx hardhat run scripts/authorize-keeper.ts --network mantleSepolia`
+   - Start keeper service: `cd keeper && npm start`
+   - Create test schedule from mobile app
+   - Watch keeper execute automatically
 
-3. **Test Scheduled Payments**
-   - Create a test schedule
-   - Execute payment manually (as keeper)
-   - Verify tokens transferred
-
-4. **Update Frontend**
-   - Add contract addresses to frontend config
-   - Test all user flows
-   - Deploy frontend
+3. **Update Frontend**
+   - BundleFactory: `0xd218F93Fd6adE12E7C89F20172aC976ec79bcbA9`
+   - VaultManager: `0x4A4A9Ae6f059334794A9200fB19E3780d17b587C`
+   - WMNT: `0x6fe0A990936C4ceAb46f8f2BfDDF02CfE2129Ff8`
+   - PaymentScheduler: `0xfAc3A13b1571A227CF36878fc46E07B56021cd7B`
 
 ## Support
 

@@ -6,25 +6,40 @@ This document provides essential information about deploying CRESCA contracts on
 
 ## Network Information
 
-### Mantle Mainnet
-- **Chain ID**: 5000
-- **RPC URL**: https://rpc.mantle.xyz
-- **Explorer**: https://mantlescan.xyz
-- **Token**: MNT
-- **Wrapped MNT**: 0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111
-
 ### Mantle Sepolia Testnet
 - **Chain ID**: 5003
 - **RPC URL**: https://rpc.sepolia.mantle.xyz
 - **Explorer**: https://sepolia.mantlescan.xyz
-- **Token**: MNT
-- **Wrapped MNT**: 0x19f5557E23e9914A18239990f6C70D68FDF0deD5
 - **Faucet**: https://faucet.sepolia.mantle.xyz
-- **Bridge**: https://app.mantle.xyz/bridge?network=sepolia
 
-### Third-Party Faucets
-- QuickNode: https://faucet.quicknode.com/mantle/sepolia
-- Thirdweb: https://thirdweb.com/mantle-sepolia-testnet/faucet
+### Mantle Mainnet
+- **Chain ID**: 5000
+- **RPC URL**: https://rpc.mantle.xyz
+- **Explorer**: https://mantlescan.xyz
+
+## Simple Setup
+
+### ethers.js
+```javascript
+const provider = new ethers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
+const wallet = new ethers.Wallet(privateKey, provider);
+
+// Send transaction
+const tx = await wallet.sendTransaction({
+  to: recipient,
+  value: ethers.parseEther('0.1')
+});
+```
+
+### Hardhat Config
+```typescript
+mantleSepolia: {
+  url: "https://rpc.sepolia.mantle.xyz",
+  chainId: 5003,
+  accounts: [process.env.ACCOUNT_PRIVATE_KEY],
+  gasPrice: 20000000, // 0.02 gwei
+}
+```
 
 ## Gas Optimization (Mantle v2 Tectonic)
 
@@ -118,61 +133,19 @@ CRESCA's SwapRouter will integrate with these Mantle DEXs:
 3. Test swap routing
 4. Monitor liquidity and prices
 
-## Deployment Checklist
+## Deploy Checklist
 
-### Pre-Deployment
-- [ ] Testnet tokens obtained from faucet
-- [ ] `ACCOUNT_PRIVATE_KEY` set in `.env`
-- [ ] Contracts compiled successfully
-- [ ] All tests passing
-- [ ] Gas optimization verified
+- [ ] Get testnet MNT from faucet
+- [ ] Set `ACCOUNT_PRIVATE_KEY` in `.env`
+- [ ] Run `npx hardhat compile`
+- [ ] Run `npx hardhat run scripts/deployAll.ts --network mantleSepolia`
+- [ ] Verify on Mantlescan
 
-### Testnet Deployment
-```bash
-# Set environment
-cp .env.example .env
-# Edit .env with your private key
+## Resources
 
-# Compile
-npx hardhat compile
-
-# Deploy to Mantle Sepolia
-npx hardhat run scripts/deploy.ts --network mantleSepolia
-
-# Verify contracts
-npx hardhat verify --network mantleSepolia <CONTRACT_ADDRESS>
-```
-
-### Mainnet Deployment
-```bash
-# Deploy to Mantle Mainnet
-npx hardhat run scripts/deploy.ts --network mantle
-
-# Verify contracts
-npx hardhat verify --network mantle <CONTRACT_ADDRESS>
-```
-
-## Mantle-Specific Features
-
-### 1. Low Gas Costs
-- Leverage Mantle's optimized gas for frequent rebalancing
-- Batch operations to reduce costs further
-- Use efficient storage patterns
-
-### 2. Fast Finality
-- Quick bundle creation and investments
-- Near-instant swap confirmations
-- Responsive scheduled payment execution
-
-### 3. EVM Compatibility
-- Standard Solidity contracts work without modification
-- Use existing tools (Hardhat, Viem, ethers.js)
-- Compatible with all Ethereum libraries
-
-### 4. Modular Architecture
-- Data availability layer separation
-- Efficient transaction processing
-- Scalable for high volume
+- [Mantle Docs](https://docs.mantle.xyz)
+- [Faucet](https://faucet.sepolia.mantle.xyz)
+- [Explorer](https://sepolia.mantlescan.xyz)
 
 ## Security Considerations
 

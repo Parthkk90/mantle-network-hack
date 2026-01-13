@@ -11,72 +11,37 @@ CRESCA is a mobile DeFi wallet built on Mantle Network that makes crypto investi
 
 ## For Users
 
-### Getting Started
-1. Download CRESCA app from App Store or Google Play
-2. Create new wallet or import existing one
-3. Get your first tokens from an exchange
-4. Start investing in bundles!
+### 1. Get Testnet MNT
+Visit: https://faucet.sepolia.mantle.xyz/
 
-### Create Your First Bundle
-1. Tap "Bundles" → "Create Bundle"
-2. Select tokens (e.g., BTC, ETH, SOL)
-3. Set allocations (e.g., 50% BTC, 30% ETH, 20% SOL)
-4. Name your bundle (e.g., "My Blue Chip Portfolio")
-5. Invest your desired amount
-6. Watch your bundle grow!
+### 2. Download Wallet (Coming Soon)
+- iOS: App Store
+- Android: Google Play
 
-### Schedule Recurring Payments
-1. Tap "Schedule" → "New Schedule"
-2. Select token and recipient
-3. Choose amount and frequency
-4. Set start date
-5. Confirm and forget!
+### 3. Create Wallet
+- Open app
+- Create new wallet
+- Save seed phrase (IMPORTANT!)
+
+### 4. Send/Receive MNT
+- Tap "Send" to send MNT
+- Tap "Receive" to get your address
 
 ## For Developers
 
-### Prerequisites
+### Quick Deploy
 ```bash
-node -v  # v20+
-npm -v   # v10+
-git --version
-```
-
-### Quick Setup
-```bash
-# Clone repository
-git clone https://github.com/cresca/mantle-hack.git
-cd mantle-hack
-
-# Install dependencies
-cd contracts
+git clone https://github.com/Parthkk90/mantle-network-hack.git
+cd mantle-network-hack/contracts
 npm install
-
-# Set up environment
-cp ../.env.example ../.env
-# Edit .env with your keys
-
-# Compile contracts
-npx hardhat compile
-
-# Run tests
-npx hardhat test
-
-# Deploy to testnet
-npx hardhat run scripts/deploy.ts --network mantle-testnet
+npx hardhat run scripts/deployAll.ts --network mantleSepolia
 ```
 
 ### Project Structure
 ```
 mantle-hack/
-├── contracts/          # Smart contracts
-│   ├── BundleFactory.sol
-│   ├── BundleToken.sol
-│   ├── VaultManager.sol
-│   ├── SwapRouter.sol
-│   └── PaymentScheduler.sol
-│
-├── backend/           # Backend services (TBD)
-├── frontend/          # Mobile app (TBD)
+├── contracts/          # Smart contracts (deployed ✅)
+├── mobile/            # React Native app (WIP 🚧)
 ├── docs/             # Documentation
 └── scripts/          # Deployment scripts
 ```

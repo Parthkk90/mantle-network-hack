@@ -25,6 +25,7 @@ interface Investment {
 
 export default function PortfolioScreen({ navigation }: any) {
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [availableBundles, setAvailableBundles] = useState<Bundle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [totalBalance, setTotalBalance] = useState('0');
@@ -72,9 +73,14 @@ export default function PortfolioScreen({ navigation }: any) {
       
       setTotalBalance(totalValue.toFixed(2));
       setTotalProfit(totalProf.toFixed(2));
+      
+      // Also load available bundles to browse
+      const allBundles = await BundleService.getAllBundles();
+      setAvailableBundles(allBundles);
     } catch (error) {
       console.error('Load portfolio error:', error);
       setInvestments([]);
+      setAvailableBundles([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -130,14 +136,8 @@ export default function PortfolioScreen({ navigation }: any) {
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>{'[NO_INVESTMENTS]'}</Text>
             <Text style={styles.emptyText}>
-              START_INVESTING_IN_BUNDLES
+              START_INVESTING_IN_BUNDLES_BELOW
             </Text>
-            <TouchableOpacity
-              style={styles.browseButton}
-              onPress={() => navigation.navigate('MarketsTab')}
-            >
-              <Text style={styles.browseButtonText}>{'[ BROWSE_MARKETS ]'}</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           investments.map((investment) => (
@@ -180,6 +180,64 @@ export default function PortfolioScreen({ navigation }: any) {
                   ]}>
                     {parseFloat(investment.profit) >= 0 ? '+' : ''}
                     {parseFloat(investment.profit).toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{'>> BROWSE_BUNDLES'}</Text>
+          <Text style={styles.sectionCount}>[{availableBundles.length}]</Text>
+        </View>
+
+        {availableBundles.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              NO_BUNDLES_AVAILABLE
+            </Text>
+          </View>
+        ) : (
+          availableBundles.map((bundle) => (
+            <TouchableOpacity
+              key={bundle.id}
+              style={styles.bundleCard}
+              onPress={() => {
+                navigation.navigate('BundleDetails', { bundle });
+              }}
+            >
+              <View style={styles.bundleHeader}>
+                <Text style={styles.bundleName}>{bundle.name.toUpperCase()}</Text>
+                <View style={styles.apyBadge}>
+                  <Text style={styles.apyText}>{bundle.apy}%</Text>
+                </View>
+              </View>
+
+              <Text style={styles.bundleComposition}>{bundle.composition}</Text>
+
+              <View style={styles.bundleStats}>
+                <View style={styles.bundleStat}>
+                  <Text style={styles.bundleStatLabel}>TVL</Text>
+                  <Text style={styles.bundleStatValue}>${parseFloat(bundle.tvl).toLocaleString()}</Text>
+                </View>
+                <View style={styles.bundleStat}>
+                  <Text style={styles.bundleStatLabel}>APY</Text>
+                  <Text style={styles.bundleStatValue}>{bundle.apy}%</Text>
+                </View>
+                <View style={styles.bundleStat}>
+                  <Text style={styles.bundleStatLabel}>LEVERAGE</Text>
+                  <Text style={styles.bundleStatValue}>{bundle.leverage || 1}x</Text>
+                </View>
+                <View style={styles.bundleStat}>
+                  <Text style={styles.bundleStatLabel}>POSITION</Text>
+                  <Text style={[
+                    styles.bundleStatValue,
+                    bundle.position === 'long' ? styles.positionLong : styles.positionShort
+                  ]}>
+                    {(bundle.position || 'LONG').toUpperCase()}
                   </Text>
                 </View>
               </View>
@@ -412,5 +470,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textWhite,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  bundleCard: {
+    backgroundColor: COLORS.background,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  bundleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  bundleName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    flex: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  apyBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  apyText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: COLORS.background,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  bundleComposition: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 16,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  bundleStats: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  bundleStat: {
+    flex: 1,
+  },
+  bundleStatLabel: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  bundleStatValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  positionLong: {
+    color: COLORS.primary,
+  },
+  positionShort: {
+    color: COLORS.error,
   },
 });

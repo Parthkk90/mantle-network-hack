@@ -12,6 +12,18 @@ export const MANTLE_SEPOLIA = {
 
 export const PAYMENT_PROCESSOR_ADDRESS = '0x7D7A1bbD55c6A2e1F23cD711B319F377D09D93f8';
 
+// Wrapped MNT for scheduled payments
+export const WMNT_ADDRESS = '0x6fe0A990936C4ceAb46f8f2BfDDF02CfE2129Ff8';
+export const WMNT_ABI = [
+  'function mint(address to, uint256 amount) external',
+  'function balanceOf(address account) external view returns (uint256)',
+  'function approve(address spender, uint256 amount) external returns (bool)',
+  'function allowance(address owner, address spender) external view returns (uint256)',
+  'function name() external view returns (string)',
+  'function symbol() external view returns (string)',
+  'function decimals() external view returns (uint8)',
+];
+
 export const PAYMENT_PROCESSOR_ABI = [
   'function sendMNT(address payable recipient, string calldata note) external payable returns (uint256)',
   'function sendToken(address token, address recipient, uint256 amount, string calldata note) external returns (uint256)',
