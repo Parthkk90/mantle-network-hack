@@ -300,4 +300,20 @@ contract BundleToken is ERC20, ReentrancyGuard, Ownable {
     {
         return (underlyingTokens, targetWeights);
     }
+    
+    /**
+     * @dev Get underlying tokens
+     * @return Array of underlying token addresses
+     */
+    function getTokens() external view returns (address[] memory) {
+        return underlyingTokens;
+    }
+    
+    /**
+     * @dev Get target weights
+     * @return Array of target weights
+     */
+    function getWeights() external view returns (uint256[] memory) {
+        return targetWeights;
+    }
 }

@@ -11,7 +11,8 @@ const RPC_URL = process.env.RPC_URL || 'https://rpc.sepolia.mantle.xyz';
 const PRIVATE_KEY = process.env.KEEPER_PRIVATE_KEY;
 const PAYMENT_SCHEDULER_ADDRESS = process.env.PAYMENT_SCHEDULER_ADDRESS || '0xYourPaymentSchedulerAddress';
 const CHECK_INTERVAL = parseInt(process.env.CHECK_INTERVAL) || 60000; // 60 seconds
-const GAS_LIMIT = 500000;
+const GAS_LIMIT = 300000; // Default gas limit
+const MAX_SCHEDULES_TO_CHECK = 100; // Limit schedules checked per cycle
 
 // PaymentScheduler ABI
 const PAYMENT_SCHEDULER_ABI = [
@@ -104,28 +105,53 @@ class PaymentKeeperService {
     console.log(`[${timestamp}] 🔍 Checking for ready payments...`);
 
     try {
-      // Get all active schedules
-      const activeScheduleIds = await this.contract.getActiveSchedules();
-      
-      if (activeScheduleIds.length === 0) {
-        console.log(`[${timestamp}] ℹ️  No active schedules found\n`);
+      // Get total number of schedules by checking recent IDs
+      // More efficient than calling getActiveSchedules which loops twice
+      let maxScheduleId = 0;
+      try {
+        // Try to get schedule at increasing IDs until we hit a non-existent one
+        for (let i = 0; i < MAX_SCHEDULES_TO_CHECK; i++) {
+          try {
+            await this.contract.getSchedule(i);
+            maxScheduleId = i;
+          } catch {
+            break; // No more schedules
+          }
+        }
+      } catch (error) {
+        console.log(`[${timestamp}] ℹ️  No schedules found\n`);
         return;
       }
 
-      console.log(`[${timestamp}] 📋 Found ${activeScheduleIds.length} active schedule(s)`);
+      if (maxScheduleId === 0) {
+        console.log(`[${timestamp}] ℹ️  No schedules found\n`);
+        return;
+      }
+
+      console.log(`[${timestamp}] 📋 Checking schedules 0-${maxScheduleId}`);
 
       // Check each schedule
       let readyCount = 0;
       let executedCount = 0;
+      let activeCount = 0;
 
-      for (const scheduleId of activeScheduleIds) {
+      for (let scheduleId = 0; scheduleId <= maxScheduleId; scheduleId++) {
         try {
+          // Get schedule first to check status
+          const schedule = await this.contract.getSchedule(scheduleId);
+          
+          // Only check active schedules (status 0 = ACTIVE)
+          if (schedule.status !== 0) {
+            continue;
+          }
+          
+          activeCount++;
+          
           // Check if ready
           const isReady = await this.contract.isScheduleReady(scheduleId);
           
           if (isReady) {
             readyCount++;
-            const schedule = await this.contract.getSchedule(scheduleId);
             
             console.log(`[${timestamp}] ⚡ Schedule #${scheduleId} is ready!`);
             console.log(`   💸 Amount: ${ethers.formatEther(schedule.amount)} MNT`);
@@ -137,15 +163,16 @@ class PaymentKeeperService {
             executedCount++;
           }
         } catch (error) {
-          console.error(`[${timestamp}] ⚠️  Error checking schedule #${scheduleId}:`, error.message);
+          // Skip non-existent schedules silently
+          if (!error.message.includes('call revert exception')) {
+            console.error(`[${timestamp}] ⚠️  Error checking schedule #${scheduleId}:`, error.message);
+          }
         }
       }
 
-      if (readyCount === 0) {
-        console.log(`[${timestamp}] ✅ All schedules up to date (0 ready for execution)\n`);
-      } else {
-        console.log(`[${timestamp}] 📊 Summary: ${executedCount}/${readyCount} payments executed\n`);
-      }
+      console.log(`[${timestamp}] 📊 Active: ${activeCount}, Ready: ${readyCount}, Executed: ${executedCount}\n`);
+
+      console.log(`[${timestamp}] 📊 Active: ${activeCount}, Ready: ${readyCount}, Executed: ${executedCount}\n`);
 
     } catch (error) {
       console.error(`[${timestamp}] ❌ Error in check cycle:`, error.message);
@@ -162,13 +189,15 @@ class PaymentKeeperService {
     try {
       console.log(`[${timestamp}] 🔄 Executing schedule #${scheduleId}...`);
 
-      // Estimate gas
+      // Estimate gas with better handling
       let gasLimit = GAS_LIMIT;
       try {
         const gasEstimate = await this.contract.executeSchedule.estimateGas(scheduleId);
-        gasLimit = Math.floor(Number(gasEstimate) * 1.2); // 20% buffer
+        gasLimit = Math.floor(Number(gasEstimate) * 1.5); // 50% buffer for safety
+        console.log(`[${timestamp}] ⛽ Estimated gas: ${gasLimit.toLocaleString()}`);
       } catch (error) {
-        console.log(`[${timestamp}] ⚠️  Could not estimate gas, using default: ${GAS_LIMIT}`);
+        console.log(`[${timestamp}] ⚠️  Gas estimation failed, using default: ${GAS_LIMIT}`);
+        console.log(`[${timestamp}]    Reason: ${error.message.substring(0, 100)}`);
       }
 
       // Execute transaction
