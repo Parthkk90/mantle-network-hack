@@ -2,13 +2,22 @@ import { ethers } from 'ethers';
 import WalletService from './WalletService';
 import { MANTLE_SEPOLIA } from '../config/constants';
 
-const BUNDLE_FACTORY_ADDRESS = '0xd218F93Fd6adE12E7C89F20172aC976ec79bcbA9';
-const VAULT_MANAGER_ADDRESS = '0x4A4A9Ae6f059334794A9200fB19E3780d17b587C';
+const BUNDLE_FACTORY_ADDRESS = '0xA3Eb8B3df5963ae6798321f8cf8087804Ca5e6Ad';
+const VAULT_MANAGER_ADDRESS = '0x0f2Fe08A3851148337a08e30a5768e20205d8F02';
+
+// Token address to symbol mapping
+const TOKEN_SYMBOLS: { [key: string]: string } = {
+  '0x6fe0A990936C4ceAb46f8f2BfDDF02CfE2129Ff8': 'MNT',
+  '0x18801321BAe6aA7FD0C45cdceA2DcFBa320e9A27': 'WBTC',
+  '0x6D4096ea28CF58C0BA5d4e25792f95Bc54CfFCd0': 'WETH',
+  '0xe2a3EF0Bfe32ae98532CA97f2CcebE981F7D5a1F': 'USDC',
+  '0x47A3E2eF94bD24a014211fD08e776ED56497E3c7': 'USDT',
+};
 
 // Minimal ABI for BundleFactory contract
 const BUNDLE_FACTORY_ABI = [
   'function allBundles(uint256) view returns (address)',
-  'function bundles(address) view returns (address bundleToken, address[] tokens, uint256[] weights, address creator, uint256 createdAt, string name, string symbol, bool isActive)',
+  'function bundles(address) view returns (address bundleToken, address creator, uint256 createdAt, string name, string symbol, bool isActive)',
   'function createBundle(address[] tokens, uint256[] weights, string name, string symbol) returns (address)',
   'function investInBundle(address bundleToken, uint256 amount) payable',
   'function getAllBundles() view returns (address[])',
@@ -84,17 +93,14 @@ class BundleService {
         bundleAddresses = await contract.getAllBundles();
         console.log('Bundle addresses from contract:', bundleAddresses);
       } catch (error) {
-        console.log('No bundles found on contract, using mock data');
-        // Return mock bundles if contract call fails
-        this.usingMockBundles = true;
-        return this.getMockBundles();
+        console.log('Error calling getAllBundles:', error);
+        throw error;
       }
 
-      // If no bundles exist yet, return mock bundles
+      // If no bundles exist yet, return empty array
       if (bundleAddresses.length === 0) {
-        console.log('No bundles on chain, returning mock bundles');
-        this.usingMockBundles = true;
-        return this.getMockBundles();
+        console.log('No bundles on chain yet');
+        return [];
       }
       
       this.usingMockBundles = false;
@@ -108,24 +114,34 @@ class BundleService {
           
           if (!bundleInfo.isActive) continue;
 
-          // Get token details
+          // Get token details from BundleToken contract
           const bundleTokenContract = new ethers.Contract(
             bundleAddress,
             BUNDLE_TOKEN_ABI,
             provider
           );
 
-          const totalSupply = await bundleTokenContract.totalSupply();
+          // First check token count to skip single-token bundles early
+          const tokens = await bundleTokenContract.getTokens();
+          
+          // Skip single-token bundles - only show diversified bundles
+          if (tokens.length === 1) {
+            continue;
+          }
+          
+          // Now fetch remaining details only for multi-token bundles
+          const [totalSupply, weights] = await Promise.all([
+            bundleTokenContract.totalSupply(),
+            bundleTokenContract.getWeights(),
+          ]);
+          
           const tvl = ethers.formatEther(totalSupply);
 
           // Format composition string
-          const composition = this.formatComposition(
-            bundleInfo.tokens,
-            bundleInfo.weights
-          );
+          const composition = this.formatComposition(tokens, weights);
 
           // Calculate estimated APY (mock for now, could be calculated from historical data)
-          const apy = this.calculateEstimatedAPY(bundleInfo.weights);
+          const apy = this.calculateEstimatedAPY(weights);
 
           bundles.push({
             id: bundleAddress,
@@ -134,8 +150,8 @@ class BundleService {
             symbol: bundleInfo.symbol,
             apy: apy,
             tvl: parseFloat(tvl).toFixed(2),
-            tokens: bundleInfo.tokens,
-            weights: bundleInfo.weights.map((w: bigint) => Number(w) / 100),
+            tokens: tokens,
+            weights: weights.map((w: bigint) => Number(w) / 100),
             composition: composition,
             creator: bundleInfo.creator,
             isActive: bundleInfo.isActive,
@@ -145,9 +161,12 @@ class BundleService {
         }
       }
 
+      // Return whatever bundles we successfully loaded
+      console.log(`Successfully loaded ${bundles.length} bundles from chain`);
       return bundles;
     } catch (error) {
       console.error('Error getting all bundles:', error);
+      // Return empty array on error - only show real bundles
       return [];
     }
   }
@@ -175,9 +194,7 @@ class BundleService {
     try {
       const allBundles = await this.getAllBundles();
       
-      // If using mock bundles, return empty array (no real investments)
-      if (this.usingMockBundles) {
-        console.log('Using mock bundles - no real investments to check');
+      if (allBundles.length === 0) {
         return [];
       }
       
@@ -187,11 +204,6 @@ class BundleService {
       const userInvestments: Bundle[] = [];
 
       for (const bundle of allBundles) {
-        // Skip mock bundles (they don't exist on chain)
-        if (bundle.isMock) {
-          continue;
-        }
-        
         try {
           const investment = await contract.getUserInvestment(bundle.address, userAddress);
           const investmentAmount = ethers.formatEther(investment);
@@ -301,11 +313,11 @@ class BundleService {
    * Format composition string from tokens and weights
    */
   private formatComposition(tokens: string[], weights: bigint[]): string {
-    const tokenSymbols = ['BTC', 'ETH', 'SOL', 'USDC', 'USDT']; // Mock symbols
-    
     const parts = tokens.map((token, index) => {
       const weight = Number(weights[index]) / 100;
-      const symbol = tokenSymbols[index % tokenSymbols.length];
+      // Get symbol from token address mapping, fallback to shortened address
+      const tokenLower = token.toLowerCase();
+      const symbol = TOKEN_SYMBOLS[token] || TOKEN_SYMBOLS[tokenLower] || `${token.slice(0, 6)}...`;
       return `${symbol} ${weight}%`;
     });
 

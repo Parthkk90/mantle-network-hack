@@ -53,6 +53,18 @@ export interface Schedule {
 class PaymentSchedulerService {
   private provider: ethers.JsonRpcProvider | null = null;
   private contract: ethers.Contract | null = null;
+  private readonly DEFAULT_GAS_LIMIT = 300000;
+
+  private async estimateGasWithBuffer(contractMethod: any, ...args: any[]): Promise<bigint> {
+    try {
+      const estimated = await contractMethod.estimateGas(...args);
+      // Add 50% buffer
+      return (estimated * 150n) / 100n;
+    } catch (error) {
+      console.log('Gas estimation failed, using default:', this.DEFAULT_GAS_LIMIT);
+      return BigInt(this.DEFAULT_GAS_LIMIT);
+    }
+  }
 
   private async getProvider() {
     if (!this.provider) {
@@ -203,7 +215,8 @@ class PaymentSchedulerService {
         throw new Error('Schedule is not ready for execution yet');
       }
 
-      const tx = await contract.executeSchedule(scheduleId);
+      const gasLimit = await this.estimateGasWithBuffer(contract.executeSchedule, scheduleId);
+      const tx = await contract.executeSchedule(scheduleId, { gasLimit });
       await tx.wait();
       
       return tx.hash;
@@ -270,7 +283,14 @@ class PaymentSchedulerService {
         signer
       );
 
-      const tx = await contract.pauseSchedule(scheduleId);
+      // Check schedule status first
+      const schedule = await contract.getSchedule(scheduleId);
+      if (schedule.status !== ScheduleStatus.ACTIVE) {
+        throw new Error(`Cannot pause schedule. Current status: ${this.getStatusText(schedule.status)}`);
+      }
+
+      const gasLimit = await this.estimateGasWithBuffer(contract.pauseSchedule, scheduleId);
+      const tx = await contract.pauseSchedule(scheduleId, { gasLimit });
       await tx.wait();
       
       return tx.hash;
@@ -293,7 +313,14 @@ class PaymentSchedulerService {
         signer
       );
 
-      const tx = await contract.resumeSchedule(scheduleId);
+      // Check schedule status first
+      const schedule = await contract.getSchedule(scheduleId);
+      if (schedule.status !== ScheduleStatus.PAUSED) {
+        throw new Error(`Cannot resume schedule. Current status: ${this.getStatusText(schedule.status)}`);
+      }
+
+      const gasLimit = await this.estimateGasWithBuffer(contract.resumeSchedule, scheduleId);
+      const tx = await contract.resumeSchedule(scheduleId, { gasLimit });
       await tx.wait();
       
       return tx.hash;
@@ -316,12 +343,26 @@ class PaymentSchedulerService {
         signer
       );
 
-      const tx = await contract.cancelSchedule(scheduleId);
+      // Check schedule status first
+      const schedule = await contract.getSchedule(scheduleId);
+      if (schedule.status === ScheduleStatus.CANCELLED) {
+        throw new Error('Schedule is already cancelled');
+      }
+      if (schedule.status === ScheduleStatus.COMPLETED) {
+        throw new Error('Cannot cancel completed schedule');
+      }
+
+      const gasLimit = await this.estimateGasWithBuffer(contract.cancelSchedule, scheduleId);
+      const tx = await contract.cancelSchedule(scheduleId, { gasLimit });
       await tx.wait();
       
       return tx.hash;
     } catch (error: any) {
       console.error('Error cancelling schedule:', error);
+      // Provide more user-friendly error messages
+      if (error.message.includes('already ended') || error.message.includes('completed')) {
+        throw new Error('This schedule has already completed and cannot be cancelled');
+      }
       throw new Error(error.message || 'Failed to cancel schedule');
     }
   }

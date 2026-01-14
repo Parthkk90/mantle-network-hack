@@ -66,7 +66,7 @@ export default function BundleDetailsScreen({ route, navigation }: any) {
         [
           {
             text: 'View Portfolio',
-            onPress: () => navigation.navigate('BundlesTab'),
+            onPress: () => navigation.navigate('Main', { screen: 'BundlesTab' }),
           },
           {
             text: 'Done',
