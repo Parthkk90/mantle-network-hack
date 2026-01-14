@@ -98,20 +98,35 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
       await WalletService.loadWallet();
       const signer = WalletService.getWallet();
       
-      // DEMO MODE: For hackathon demonstration, we simulate the investment
-      // In production, this would call RWAVault.invest(assetId, amount) function
-      // which would mint RWA tokens to the investor
+      // REAL TESTNET TRANSACTION: Send investment amount to RWAVault
+      // In production, this would be a dedicated InvestmentManager contract
+      // that receives payment and mints tokens atomically
       
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const tx = await signer.sendTransaction({
+        to: '0xC3c278BaE4CCe83e467c388Ea8302eEC119c7a63', // RWAVault address
+        value: ethers.parseEther(investmentAmount),
+        // Adding data field to identify this as an investment
+        data: ethers.id(`invest:${asset.tokenId}:${userAddress}`).slice(0, 10),
+      });
+
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
       
-      // Generate mock transaction hash for demo
-      const mockTxHash = `0x${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`;
+      if (!receipt) {
+        throw new Error('Transaction failed');
+      }
 
       Alert.alert(
         'Investment Successful! 🎉',
-        `You have invested ${investmentAmount} MNT in ${asset.name}.\n\nTransaction: ${mockTxHash.slice(0, 10)}...${mockTxHash.slice(-8)}\n\nYour RWA tokens will be reflected in your portfolio shortly.\n\n✨ DEMO MODE: This is a simulated investment for demonstration purposes.`,
+        `Your investment of ${investmentAmount} MNT has been sent to the RWA Vault.\n\nTransaction Hash:\n${tx.hash}\n\nView on Mantlescan:\nhttps://sepolia.mantlescan.xyz/tx/${tx.hash}\n\n📝 Note: In a production environment, RWA tokens would be minted to your wallet automatically. For this testnet demo, the vault custodian would mint tokens to investors after payment verification.`,
         [
+          {
+            text: 'View on Explorer',
+            onPress: () => {
+              // In production, would open URL
+              Alert.alert('Explorer', `Transaction: ${tx.hash}`);
+            },
+          },
           {
             text: 'View Portfolio',
             onPress: () => navigation.navigate('Main', { screen: 'RWATab' }),
@@ -128,10 +143,18 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
       await loadWalletData();
     } catch (error: any) {
       console.error('Investment error:', error);
-      Alert.alert(
-        'Investment Failed',
-        error.message || 'Unable to complete investment. Please try again.'
-      );
+      
+      let errorMessage = 'Unable to complete investment. Please try again.';
+      
+      if (error.code === 'INSUFFICIENT_FUNDS') {
+        errorMessage = 'Insufficient MNT balance for this investment and gas fees.';
+      } else if (error.code === 'ACTION_REJECTED') {
+        errorMessage = 'Transaction was rejected. Please try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Investment Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -173,7 +196,7 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
         {/* Demo Mode Banner */}
         <View style={styles.demoBanner}>
           <Text style={styles.demoText}>
-            ✨ DEMO MODE: Investments are simulated for demonstration purposes
+            🔗 TESTNET: Real transactions on Mantle Sepolia
           </Text>
         </View>
 
