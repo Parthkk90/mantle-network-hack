@@ -15,6 +15,8 @@ import CreateBundleScreen from './src/screens/CreateBundleScreen';
 import TokenDetailsScreen from './src/screens/TokenDetailsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ScheduleScreen from './src/screens/ScheduleScreen';
+import RWAScreen from './src/screens/RWAScreen';
+import KYCVerificationScreen from './src/screens/KYCVerificationScreen';
 import WalletService from './src/services/WalletService';
 import { COLORS } from './src/theme/colors';
 
@@ -41,6 +43,7 @@ function TabIcon({ name, color, focused }: { name: string; color: string; focuse
     markets: '⟁',
     schedule: '◷',
     bundles: '▦',
+    assets: '🏛',
     profile: '⚙',
   };
   
@@ -117,6 +120,16 @@ function MainTabs() {
           tabBarLabel: 'Bundles',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="bundles" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="RWATab"
+        component={RWAScreen}
+        options={{
+          tabBarLabel: 'Assets',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="assets" color={color} focused={focused} />
           ),
         }}
       />
@@ -202,6 +215,7 @@ export default function App() {
             <Stack.Screen name="BundleDetails" component={BundleDetailsScreen} />
             <Stack.Screen name="TokenDetails" component={TokenDetailsScreen} />
             <Stack.Screen name="CreateBundle" component={CreateBundleScreen} />
+            <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} />
           </>
         )}
       </Stack.Navigator>
