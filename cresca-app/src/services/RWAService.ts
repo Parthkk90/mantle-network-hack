@@ -221,7 +221,12 @@ class RWAService {
       }
       
       return distributions;
-    } catch (error) {
+    } catch (error: any) {
+      // Silently return empty array for users with no distributions yet
+      // This is expected behavior for newly verified users
+      if (error?.code === 'CALL_EXCEPTION') {
+        return [];
+      }
       console.error('Error getting yield distributions:', error);
       return [];
     }
