@@ -277,10 +277,10 @@ export default function RWAScreen({ navigation }: any) {
               <TouchableOpacity
                 style={styles.investButton}
                 onPress={() =>
-                  Alert.alert('Coming Soon', 'Investment UI will be available in next phase')
+                  navigation.navigate('RWAInvestment', { asset })
                 }
               >
-                <Text style={styles.investButtonText}>VIEW_DETAILS</Text>
+                <Text style={styles.investButtonText}>INVEST_NOW</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.lockedBadge}>

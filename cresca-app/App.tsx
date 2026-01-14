@@ -17,6 +17,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import ScheduleScreen from './src/screens/ScheduleScreen';
 import RWAScreen from './src/screens/RWAScreen';
 import KYCVerificationScreen from './src/screens/KYCVerificationScreen';
+import RWAInvestmentScreen from './src/screens/RWAInvestmentScreen';
 import WalletService from './src/services/WalletService';
 import { COLORS } from './src/theme/colors';
 
@@ -216,6 +217,7 @@ export default function App() {
             <Stack.Screen name="TokenDetails" component={TokenDetailsScreen} />
             <Stack.Screen name="CreateBundle" component={CreateBundleScreen} />
             <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} />
+            <Stack.Screen name="RWAInvestment" component={RWAInvestmentScreen} />
           </>
         )}
       </Stack.Navigator>
