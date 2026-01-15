@@ -8,28 +8,12 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { COLORS } from '../theme/colors';
-
-interface TokenDetailsScreenProps {
-  route: {
-    params: {
-      token: {
-        id: string;
-        name: string;
-        symbol: string;
-        price: number;
-        change24h: number;
-        marketCap: number;
-        volume24h: number;
-      };
-    };
-  };
-  navigation: any;
-}
 
 const { width } = Dimensions.get('window');
 
-export default function TokenDetailsScreen({ route, navigation }: TokenDetailsScreenProps) {
+export default function TokenDetailsScreen({ route, navigation }: any) {
   const { token } = route.params;
   const [timeframe, setTimeframe] = useState('1D');
 
@@ -54,30 +38,83 @@ export default function TokenDetailsScreen({ route, navigation }: TokenDetailsSc
 
   const renderChart = () => {
     const chartHeight = 200;
-    const chartWidth = width - 32;
-    const pointWidth = chartWidth / (chartData.length - 1);
+    const chartWidth = width - 64;
+    const padding = 16;
+    
+    // Create smooth line path
+    const createLinePath = () => {
+      const points = chartData.map((price, index) => {
+        const x = padding + (index / (chartData.length - 1)) * (chartWidth - padding * 2);
+        const y = padding + ((maxPrice - price) / priceRange) * (chartHeight - padding * 2);
+        return { x, y };
+      });
+      
+      // Create smooth curve using bezier
+      let path = `M ${points[0].x} ${points[0].y}`;
+      
+      for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const cpX = (prev.x + curr.x) / 2;
+        path += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`;
+      }
+      
+      return path;
+    };
+    
+    // Create gradient area path
+    const createAreaPath = () => {
+      const linePath = createLinePath();
+      const lastPoint = chartData.length - 1;
+      const lastX = padding + (lastPoint / (chartData.length - 1)) * (chartWidth - padding * 2);
+      const firstX = padding;
+      return `${linePath} L ${lastX} ${chartHeight - padding} L ${firstX} ${chartHeight - padding} Z`;
+    };
+
+    const lineColor = token.change24h >= 0 ? COLORS.success : COLORS.error;
+    const lastPoint = chartData[chartData.length - 1];
+    const lastX = padding + ((chartData.length - 1) / (chartData.length - 1)) * (chartWidth - padding * 2);
+    const lastY = padding + ((maxPrice - lastPoint) / priceRange) * (chartHeight - padding * 2);
 
     return (
       <View style={styles.chartContainer}>
         <View style={styles.chart}>
-          {chartData.map((price, index) => {
-            const normalizedHeight = ((price - minPrice) / priceRange) * chartHeight;
-            const leftPosition = index * pointWidth;
-
-            return (
-              <View
-                key={index}
-                style={[
-                  styles.chartBar,
-                  {
-                    height: normalizedHeight,
-                    left: leftPosition,
-                    bottom: 0,
-                  },
-                ]}
-              />
-            );
-          })}
+          <Svg width={chartWidth} height={chartHeight}>
+            <Defs>
+              <LinearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={lineColor} stopOpacity="0.3" />
+                <Stop offset="1" stopColor={lineColor} stopOpacity="0.05" />
+              </LinearGradient>
+            </Defs>
+            {/* Gradient area fill */}
+            <Path
+              d={createAreaPath()}
+              fill="url(#areaGradient)"
+            />
+            {/* Line */}
+            <Path
+              d={createLinePath()}
+              stroke={lineColor}
+              strokeWidth={2.5}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* End point dot */}
+            <Circle
+              cx={lastX}
+              cy={lastY}
+              r={5}
+              fill={lineColor}
+            />
+            <Circle
+              cx={lastX}
+              cy={lastY}
+              r={8}
+              fill={lineColor}
+              opacity={0.3}
+            />
+          </Svg>
         </View>
         <View style={styles.chartLabels}>
           <Text style={styles.chartLabel}>${minPrice.toFixed(2)}</Text>
@@ -122,23 +159,25 @@ export default function TokenDetailsScreen({ route, navigation }: TokenDetailsSc
         </View>
 
         <View style={styles.timeframeSelector}>
-          {['1H', '1D', '1W', '1M', '1Y'].map((tf) => (
-            <TouchableOpacity
-              key={tf}
-              style={[
-                styles.timeframeButton,
-                timeframe === tf && styles.timeframeButtonActive
-              ]}
-              onPress={() => setTimeframe(tf)}
-            >
-              <Text style={[
-                styles.timeframeText,
-                timeframe === tf && styles.timeframeTextActive
-              ]}>
-                {tf}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <View style={styles.timeframeContainer}>
+            {['1H', '1D', '1W', '1M', '1Y'].map((tf) => (
+              <TouchableOpacity
+                key={tf}
+                style={[
+                  styles.timeframeButton,
+                  timeframe === tf && styles.timeframeButtonActive
+                ]}
+                onPress={() => setTimeframe(tf)}
+              >
+                <Text style={[
+                  styles.timeframeText,
+                  timeframe === tf && styles.timeframeTextActive
+                ]}>
+                  {tf}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {renderChart()}
@@ -313,29 +352,33 @@ const styles = StyleSheet.create({
   },
   timeframeSelector: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  timeframeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  timeframeContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 3,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  timeframeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
   timeframeButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.text,
   },
   timeframeText: {
-    fontSize: 12,
+    fontSize: 13,
     color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontWeight: '600',
   },
   timeframeTextActive: {
-    color: COLORS.background,
-    fontWeight: 'bold',
+    color: COLORS.textWhite,
   },
   chartContainer: {
     paddingHorizontal: 16,
@@ -345,16 +388,11 @@ const styles = StyleSheet.create({
   },
   chart: {
     height: 200,
-    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
     overflow: 'hidden',
-  },
-  chartBar: {
-    position: 'absolute',
-    width: 8,
-    backgroundColor: COLORS.primary,
-    opacity: 0.7,
   },
   chartLabels: {
     flexDirection: 'row',
