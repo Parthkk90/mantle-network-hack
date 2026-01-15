@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,189 +6,316 @@ import {
   TouchableOpacity,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
   Platform,
+  Linking,
 } from 'react-native';
-import WalletService from '../services/WalletService';
-import PaymentService from '../services/PaymentService';
+import { Ionicons } from '@expo/vector-icons';
+import { useWallet } from '../hooks/useWallet';
+import { 
+  useTransactions, 
+  Transaction as AppTransaction, 
+  getTransactionIcon, 
+  getStatusColor, 
+  getTransactionTypeName 
+} from '../context/TransactionContext';
+import { useNetwork } from '../context/NetworkContext';
 import { MANTLE_SEPOLIA } from '../config/constants';
 import { COLORS } from '../theme/colors';
+import { HomeScreenSkeleton } from '../components/Shimmer';
+import AnimatedNumber from '../components/AnimatedNumber';
+import FadeInView from '../components/FadeInView';
+import AnimatedPressable from '../components/AnimatedPressable';
+
+type FilterType = 'Latest' | 'Oldest' | 'This Week';
 
 export default function HomeScreen({ navigation }: any) {
-  const [address, setAddress] = useState('');
-  const [balance, setBalance] = useState('0');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [payments, setPayments] = useState<{ sent: any[]; received: any[] }>({ sent: [], received: [] });
+  const [activeFilter, setActiveFilter] = useState<FilterType>('Latest');
+  const [userName] = useState('Pascal');
 
-  useEffect(() => {
-    loadWalletData();
-  }, []);
+  // Use network context for network switching
+  const { network, isTestnet, toggleNetwork } = useNetwork();
 
-  const loadWalletData = async () => {
-    try {
-      const addr = await WalletService.getAddress();
-      setAddress(addr);
-      
-      const bal = await WalletService.getBalance();
-      setBalance(bal);
-      
-      try {
-        const history = await PaymentService.getPaymentHistory(addr);
-        setPayments(history);
-      } catch (historyError) {
-        console.log('Could not load payment history');
-        setPayments({ sent: [], received: [] });
-      }
-    } catch (error) {
-      console.error('Load wallet error:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  // Use wallet hook with 30-second polling for background refresh
+  const { 
+    data: walletData, 
+    loading: walletLoading, 
+    formattedBalance,
+    shortAddress,
+    refresh: refreshWallet 
+  } = useWallet(30000);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadWalletData();
-  };
+  // Use transaction context
+  const { transactions, refreshTransactions } = useTransactions();
+
+  // Show shimmer during initial load only
+  const isInitialLoading = walletLoading && !walletData;
+
+  const onRefresh = useCallback(async () => {
+    await Promise.all([refreshWallet(), refreshTransactions()]);
+  }, [refreshWallet, refreshTransactions]);
 
   const formatAddress = (addr: string) => {
+    if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+  const getFilteredTransactions = useCallback((): AppTransaction[] => {
+    let filtered = [...transactions];
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    switch (activeFilter) {
+      case 'Latest':
+        filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        break;
+      case 'Oldest':
+        filtered.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        break;
+      case 'This Week':
+        filtered = filtered.filter(t => new Date(t.timestamp) >= weekAgo);
+        filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        break;
+      default:
+        break;
+    }
+
+    // Sort by timestamp (newest first)
+    filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return filtered.slice(0, 15);
+  }, [transactions, activeFilter]);
+
+  const handleTransactionPress = (transaction: AppTransaction) => {
+    navigation.navigate('TransactionDetails', { transaction });
+  };
+
+  const handleViewOnExplorer = async () => {
+    const url = `${MANTLE_SEPOLIA.explorerUrl}/address/${walletData?.address}`;
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      }
+    } catch (error) {
+      console.error('Error opening explorer:', error);
+    }
+  };
+
+  // Show shimmer skeleton during initial load
+  if (isInitialLoading) {
+    return <HomeScreenSkeleton />;
   }
+
+  const address = walletData?.address || '';
+  const balance = walletData?.balance || '0';
+  const usdBalance = (parseFloat(balance) * 1.8).toFixed(2);
+  const filteredTransactions = getFilteredTransactions();
 
   return (
     <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl 
-          refreshing={refreshing} 
+          refreshing={walletLoading && !!walletData}
           onRefresh={onRefresh}
           tintColor={COLORS.primary}
         />
       }
+      showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headerSection}>
-        <View style={styles.networkBadge}>
-          <View style={styles.networkDot} />
-          <Text style={styles.networkText}>MANTLE_TESTNET</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
+            </View>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{userName}</Text>
+            <Ionicons name="chevron-down" size={14} color={COLORS.textMuted} />
+          </View>
         </View>
-        
-        <Text style={styles.balanceLabel}>TOTAL_BALANCE</Text>
-        <Text style={styles.balanceAmount}>${(parseFloat(balance) * 10).toFixed(2)}</Text>
-        
-        <View style={styles.balanceDetails}>
-          <Text style={styles.balanceMNT}>{parseFloat(balance).toFixed(6)} MNT</Text>
-          <Text style={styles.balanceChange}>↗ +1.44%</Text>
-        </View>
-      </View>
-
-      <View style={styles.actionsRow}>
-        <TouchableOpacity 
-          style={styles.actionCircle}
-          onPress={() => navigation.navigate('Send')}
-        >
-          <View style={styles.circleButton}>
-            <Text style={styles.circleIcon}>↑</Text>
-          </View>
-          <Text style={styles.circleLabel}>Send</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.actionCircle}
-          onPress={() => navigation.navigate('Receive')}
-        >
-          <View style={styles.circleButton}>
-            <Text style={styles.circleIcon}>↓</Text>
-          </View>
-          <Text style={styles.circleLabel}>Receive</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.actionCircle}
-          onPress={() => navigation.navigate('MarketsTab')}
-        >
-          <View style={styles.circleButton}>
-            <Text style={styles.circleIcon}>⇄</Text>
-          </View>
-          <Text style={styles.circleLabel}>Swap</Text>
+        <TouchableOpacity style={styles.networkToggle} onPress={toggleNetwork}>
+          <View style={[styles.networkDot, { backgroundColor: isTestnet ? COLORS.success : '#FF8C00' }]} />
+          <Text style={styles.networkText}>{isTestnet ? 'Testnet' : 'Mainnet'}</Text>
+          <Ionicons name="swap-horizontal" size={14} color={COLORS.textMuted} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.historySection}>
-        <Text style={styles.sectionTitle}>{'>> RECENT_ACTIVITY'}</Text>
-        
-        {payments.sent.length === 0 && payments.received.length === 0 ? (
+      {/* Balance Card */}
+      <FadeInView delay={100}>
+        <View style={styles.balanceSection}>
+          <View style={styles.balanceLabelRow}>
+            <Text style={styles.balanceLabel}>Total balance</Text>
+            <Ionicons name="chevron-down" size={14} color={COLORS.textMuted} />
+          </View>
+          <AnimatedNumber 
+            value={parseFloat(usdBalance)} 
+            style={styles.balanceAmount}
+            prefix="$"
+            decimals={2}
+          />
+          <View style={styles.balanceDetails}>
+            <AnimatedNumber 
+              value={parseFloat(balance)} 
+              style={styles.balanceMNT}
+              suffix=" MNT"
+              decimals={6}
+            />
+            <TouchableOpacity style={styles.copyButton}>
+              <Ionicons name="copy-outline" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.changeContainer}>
+            <Ionicons name="trending-up" size={14} color={COLORS.success} />
+            <Text style={styles.balanceChange}>1.44%</Text>
+          </View>
+        </View>
+      </FadeInView>
+
+      {/* Quick Actions */}
+      <FadeInView delay={200}>
+        <View style={styles.actionsRow}>
+          <AnimatedPressable 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Send')}
+          >
+            <View style={styles.actionIconContainer}>
+              <Ionicons name="arrow-up" size={20} color={COLORS.textWhite} />
+            </View>
+            <Text style={styles.actionLabel}>Send</Text>
+          </AnimatedPressable>
+
+          <AnimatedPressable 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Receive')}
+          >
+            <View style={styles.actionIconContainer}>
+              <Ionicons name="arrow-down" size={20} color={COLORS.textWhite} />
+            </View>
+            <Text style={styles.actionLabel}>Receive</Text>
+          </AnimatedPressable>
+
+          <AnimatedPressable 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Swap')}
+          >
+            <View style={styles.actionIconContainer}>
+              <Ionicons name="swap-horizontal" size={20} color={COLORS.textWhite} />
+            </View>
+            <Text style={styles.actionLabel}>Swap</Text>
+          </AnimatedPressable>
+        </View>
+      </FadeInView>
+
+      {/* Transaction History */}
+      <FadeInView delay={300}>
+        <View style={styles.historySection}>
+          <View style={styles.historyHeader}>
+            <Text style={styles.sectionTitle}>Transaction History</Text>
+            <TouchableOpacity onPress={refreshTransactions}>
+              <Ionicons name="refresh" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+        {/* Filter Tabs */}
+        <View style={styles.filterTabs}>
+          {(['Latest', 'Oldest', 'This Week'] as FilterType[]).map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                style={[
+                  styles.filterTab,
+                  activeFilter === filter && styles.filterTabActive
+                ]}
+                onPress={() => setActiveFilter(filter)}
+              >
+                <Text style={[
+                  styles.filterTabText,
+                  activeFilter === filter && styles.filterTabTextActive
+                ]}>
+                  {filter}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+        {/* Transaction List */}
+        {filteredTransactions.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>{'[NO_TRANSACTIONS_FOUND]'}</Text>
+            <Ionicons name="document-text-outline" size={40} color={COLORS.textMuted} />
+            <Text style={styles.emptyText}>No transactions yet</Text>
+            <Text style={styles.emptySubtext}>Your transaction history will appear here</Text>
           </View>
         ) : (
-          <>
-            {payments.sent.slice(0, 5).map((payment) => (
-              <View key={payment.id} style={styles.transactionItem}>
-                <View style={styles.transactionIcon}>
-                  <Text style={styles.transactionIconText}>↑</Text>
-                </View>
-                <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionType}>SENT</Text>
-                  <Text style={styles.transactionAddress}>
-                    {formatAddress(payment.recipient)}
-                  </Text>
-                  <Text style={styles.transactionNote}>{payment.note}</Text>
-                </View>
-                <View style={styles.transactionAmount}>
-                  <Text style={styles.transactionAmountText}>
-                    -{parseFloat(payment.amount).toFixed(4)} MNT
-                  </Text>
-                  <Text style={styles.transactionDate}>
-                    {payment.timestamp.toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-            ))}
-
-            {payments.received.slice(0, 5).map((payment) => (
-              <View key={payment.id} style={styles.transactionItem}>
-                <View style={[styles.transactionIcon, styles.transactionIconReceived]}>
-                  <Text style={styles.transactionIconText}>↓</Text>
-                </View>
-                <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionType}>RECEIVED</Text>
-                  <Text style={styles.transactionAddress}>
-                    {formatAddress(payment.sender)}
-                  </Text>
-                  <Text style={styles.transactionNote}>{payment.note}</Text>
-                </View>
-                <View style={styles.transactionAmount}>
-                  <Text style={[styles.transactionAmountText, styles.transactionAmountReceived]}>
-                    +{parseFloat(payment.amount).toFixed(4)} MNT
-                  </Text>
-                  <Text style={styles.transactionDate}>
-                    {payment.timestamp.toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </>
+          filteredTransactions.map((transaction, index) => {
+            const iconName = getTransactionIcon(transaction.type);
+            const isSuccess = transaction.status === 'confirmed';
+            const isFailed = transaction.status === 'failed';
+            
+            return (
+              <FadeInView key={transaction.id} delay={350 + index * 50}>
+                <AnimatedPressable 
+                  style={styles.transactionItem}
+                  onPress={() => handleTransactionPress(transaction)}
+                >
+                  <View style={styles.transactionIcon}>
+                    <Ionicons 
+                      name={iconName as any} 
+                      size={16} 
+                      color={COLORS.textMuted} 
+                    />
+                  </View>
+                  
+                  <View style={styles.transactionDetails}>
+                    <Text style={styles.transactionType}>
+                      {getTransactionTypeName(transaction.type)}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      {new Date(transaction.timestamp).toLocaleDateString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric'
+                      })} {new Date(transaction.timestamp).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      })}
+                    </Text>
+                    {transaction.txHash && (
+                      <Text style={styles.transactionHash} numberOfLines={1}>
+                        {transaction.txHash.slice(0, 20)}...
+                      </Text>
+                    )}
+                  </View>
+                  
+                  <View style={styles.transactionStatusContainer}>
+                    {isSuccess ? (
+                      <Ionicons name="checkmark" size={20} color={COLORS.success} />
+                    ) : isFailed ? (
+                      <Ionicons name="close" size={20} color={COLORS.error} />
+                    ) : (
+                      <Ionicons name="time-outline" size={20} color={COLORS.warning} />
+                    )}
+                  </View>
+                </AnimatedPressable>
+              </FadeInView>
+            );
+          })
         )}
-      </View>
+        </View>
+      </FadeInView>
 
+      {/* View on Explorer */}
       <TouchableOpacity
         style={styles.explorerButton}
-        onPress={() => {
-          console.log(`${MANTLE_SEPOLIA.explorerUrl}/address/${address}`);
-        }}
+        onPress={handleViewOnExplorer}
       >
-        <Text style={styles.explorerButtonText}>{'[ VIEW_ON_EXPLORER ]'}</Text>
+        <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+        <Text style={styles.explorerButtonText}>View Address on Explorer</Text>
       </TouchableOpacity>
+
+      <View style={styles.bottomSpacer} />
     </ScrollView>
   );
 }
@@ -204,197 +331,321 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
-  headerSection: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 32,
-    backgroundColor: COLORS.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 16,
   },
-  networkBadge: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 16,
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  userInfo: {
+    justifyContent: 'center',
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  networkToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    marginBottom: 24,
-    gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
   },
   networkDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
   },
   networkText: {
     fontSize: 12,
-    color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  balanceSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  balanceLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   balanceLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
+    fontSize: 14,
+    color: COLORS.textSecondary,
     marginBottom: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    letterSpacing: 1,
   },
   balanceAmount: {
     fontSize: 48,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: COLORS.text,
     marginBottom: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   balanceDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    marginBottom: 4,
   },
   balanceMNT: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  copyButton: {
+    padding: 4,
+  },
+  changeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
   },
   balanceChange: {
     fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    color: COLORS.accentGreen,
+    fontWeight: '500',
   },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 32,
-    paddingHorizontal: 32,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    marginBottom: 24,
   },
-  actionCircle: {
+  actionButton: {
     alignItems: 'center',
   },
-  circleButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  actionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  circleIcon: {
-    fontSize: 32,
-    color: COLORS.background,
-    fontWeight: 'bold',
-  },
-  circleLabel: {
-    fontSize: 14,
-    color: COLORS.text,
+  actionIcon: {
+    fontSize: 20,
+    color: COLORS.primary,
     fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  actionLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   historySection: {
-    backgroundColor: COLORS.cardBackground,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: COLORS.background,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
+    fontStyle: 'italic',
+    color: COLORS.text,
+  },
+  refreshIcon: {
+    fontSize: 20,
+    color: COLORS.textMuted,
+  },
+  filterScroll: {
     marginBottom: 16,
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  filterTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  filterTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.background,
+  },
+  filterTabActive: {
+    backgroundColor: COLORS.text,
+    borderColor: COLORS.text,
+  },
+  filterTabText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  filterTabTextActive: {
+    color: COLORS.textWhite,
   },
   emptyState: {
-    padding: 32,
+    padding: 40,
     alignItems: 'center',
   },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
   emptyText: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  emptySubtext: {
     fontSize: 14,
     color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   transactionItem: {
     flexDirection: 'row',
-    paddingVertical: 16,
+    alignItems: 'flex-start',
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.divider,
   },
   transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: COLORS.error,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    marginTop: 2,
   },
   transactionIconReceived: {
-    backgroundColor: 'rgba(0, 255, 65, 0.1)',
-    borderColor: COLORS.primary,
+    backgroundColor: '#E8F5E9',
   },
   transactionIconText: {
-    fontSize: 20,
-    color: COLORS.textWhite,
+    fontSize: 18,
+    color: COLORS.text,
   },
   transactionDetails: {
     flex: 1,
   },
   transactionType: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  transactionAddress: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
     marginBottom: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  transactionNote: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  transactionAmount: {
-    alignItems: 'flex-end',
-  },
-  transactionAmountText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.error,
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  transactionAmountReceived: {
-    color: COLORS.primary,
   },
   transactionDate: {
-    fontSize: 11,
+    fontSize: 13,
     color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    marginBottom: 2,
+  },
+  transactionHash: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  transactionStatusContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 12,
+  },
+  transactionAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  transactionStatus: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  statusSuccess: {
+    color: COLORS.accentGreen,
+  },
+  statusFailed: {
+    color: COLORS.accentRed,
   },
   explorerButton: {
-    marginHorizontal: 16,
-    marginBottom: 32,
-    padding: 16,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    gap: 8,
   },
   explorerButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  explorerArrow: {
+    fontSize: 14,
+    color: COLORS.primary,
+  },
+  bottomSpacer: {
+    height: 100,
   },
 });

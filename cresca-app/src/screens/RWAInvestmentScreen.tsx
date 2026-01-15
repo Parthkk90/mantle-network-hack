@@ -9,14 +9,102 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import { COLORS } from '../theme/colors';
-import RWAService, { RWAAsset } from '../services/RWAService';
+import RWAService from '../services/RWAService';
 import WalletService from '../services/WalletService';
 import { ethers } from 'ethers';
+import { useTransactions } from '../context/TransactionContext';
+import { MANTLE_SEPOLIA } from '../config/constants';
+
+// Local interface for demo assets passed from RWAScreen
+interface DemoAsset {
+  tokenId: string;
+  name: string;
+  assetType: number;
+  totalValue: string;
+  tokenizedValue: string;
+  yieldRate: number;
+  isActive: boolean;
+  lastYieldDate: Date;
+}
+
+// New vault interface matching RWAScreen
+interface RWAVault {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  expectedYield: number;
+  grossYield: number;
+  hedgingCost: number;
+  riskScore: string;
+  riskLevel: string;
+  protection: string;
+  lockPeriod: number;
+  filledAmount: number;
+  capAmount: number;
+  status: string;
+  isActive: boolean;
+  underlyingAssets: any[];
+}
 
 export default function RWAInvestmentScreen({ route, navigation }: any) {
-  const { asset } = route.params as { asset: RWAAsset };
+  // Support both old asset format and new vault format
+  const params = route.params as { asset?: DemoAsset; vault?: RWAVault };
+  const vault = params.vault;
+  const legacyAsset = params.asset;
+  
+  // Normalize data to work with both formats
+  const assetData = vault ? {
+    name: vault.name,
+    assetType: getCategoryType(vault.category),
+    totalValue: String(vault.capAmount),
+    tokenizedValue: String(vault.filledAmount),
+    yieldRate: vault.expectedYield * 100, // Convert percentage to basis points
+    isActive: vault.isActive,
+    category: vault.category,
+    description: vault.description,
+    riskScore: vault.riskScore,
+    riskLevel: vault.riskLevel,
+    protection: vault.protection,
+    lockPeriod: vault.lockPeriod,
+    grossYield: vault.grossYield,
+    hedgingCost: vault.hedgingCost,
+    underlyingAssets: vault.underlyingAssets || [],
+  } : legacyAsset ? {
+    name: legacyAsset.name,
+    assetType: legacyAsset.assetType,
+    totalValue: legacyAsset.totalValue,
+    tokenizedValue: legacyAsset.tokenizedValue,
+    yieldRate: legacyAsset.yieldRate,
+    isActive: legacyAsset.isActive,
+    category: RWAService.getAssetTypeName(legacyAsset.assetType),
+    description: '',
+    riskScore: 'A',
+    riskLevel: 'Medium',
+    protection: 'None',
+    lockPeriod: 0,
+    grossYield: legacyAsset.yieldRate / 100,
+    hedgingCost: 0,
+    underlyingAssets: [],
+  } : null;
+
+  // Helper to convert category string to asset type number
+  function getCategoryType(category: string): number {
+    const categoryMap: Record<string, number> = {
+      'REAL ESTATE': 0,
+      'BOND': 1,
+      'GOV BOND': 1,
+      'INVOICE': 2,
+      'MIXED': 3,
+      'EQUITY': 4,
+    };
+    return categoryMap[category.toUpperCase()] ?? 4;
+  }
+
+  const { addTransaction } = useTransactions();
   
   const [loading, setLoading] = useState(false);
   const [investmentAmount, setInvestmentAmount] = useState('');
@@ -81,7 +169,7 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
 
     Alert.alert(
       'Confirm Investment',
-      `Invest ${investmentAmount} MNT in ${asset.name}?\n\nYou will receive approximately ${estimatedTokens} RWA tokens.`,
+      `Invest ${investmentAmount} MNT in ${assetData?.name}?\n\nYou will receive approximately ${estimatedTokens} RWA tokens.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -117,10 +205,32 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
         throw new Error('Transaction failed');
       }
 
+      // Save transaction to history
+      await addTransaction({
+        type: 'rwa_investment',
+        status: 'confirmed',
+        txHash: tx.hash,
+        amount: investmentAmount,
+        token: 'MNT',
+        from: userAddress,
+        to: INVESTMENT_TREASURY,
+        blockNumber: receipt.blockNumber,
+        metadata: {
+          assetName: assetData?.name || 'RWA Asset',
+          assetType: assetData?.category || 'Unknown',
+          estimatedTokens: estimatedTokens,
+          yieldRate: assetData?.yieldRate || 0,
+        },
+      });
+
       Alert.alert(
-        'Investment Successful! 🎉',
-        `Your investment of ${investmentAmount} MNT in ${asset.name} has been confirmed!\n\nTransaction Hash:\n${tx.hash.slice(0, 20)}...\n\nBlock: ${receipt.blockNumber}\n\nView on Mantlescan:\nhttps://sepolia.mantlescan.xyz/tx/${tx.hash}\n\n✅ This is a REAL transaction on Mantle Sepolia testnet!\n\n📝 In production: RWA tokens are minted automatically via InvestmentManager contract.`,
+        'Investment Successful!',
+        `Your investment of ${investmentAmount} MNT in ${assetData?.name} has been confirmed!\n\nTransaction Hash:\n${tx.hash.slice(0, 20)}...\n\nBlock: ${receipt.blockNumber}`,
         [
+          {
+            text: 'View on Explorer',
+            onPress: () => Linking.openURL(`${MANTLE_SEPOLIA.explorerUrl}/tx/${tx.hash}`),
+          },
           {
             text: 'View Portfolio',
             onPress: () => navigation.navigate('Main', { screen: 'RWATab' }),
@@ -154,9 +264,9 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
     }
   };
 
-  const formatCurrency = (wei: bigint) => {
-    const eth = ethers.formatEther(wei);
-    return `$${parseFloat(eth).toLocaleString()}`;
+  const formatCurrency = (value: string) => {
+    const num = parseFloat(value);
+    return `$${num.toLocaleString()}`;
   };
 
   const formatYieldRate = (rate: number) => {
@@ -177,12 +287,12 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
         <View style={styles.assetHeader}>
           <View>
             <Text style={styles.assetType}>
-              {RWAService.getAssetTypeName(asset.assetType)}
+              {assetData?.category || 'Unknown'}
             </Text>
-            <Text style={styles.assetName}>{asset.name}</Text>
+            <Text style={styles.assetName}>{assetData?.name || 'RWA Asset'}</Text>
           </View>
           <View style={styles.yieldBadge}>
-            <Text style={styles.yieldRate}>{formatYieldRate(asset.yieldRate)}</Text>
+            <Text style={styles.yieldRate}>{formatYieldRate(assetData?.yieldRate || 0)}</Text>
             <Text style={styles.yieldLabel}>APY</Text>
           </View>
         </View>
@@ -190,23 +300,23 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
         {/* Demo Mode Banner */}
         <View style={styles.demoBanner}>
           <Text style={styles.demoText}>
-            🔗 TESTNET: Real transactions on Mantle Sepolia
+            TESTNET: Real transactions on Mantle Sepolia
           </Text>
         </View>
 
         <View style={styles.assetDetails}>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>TOTAL_VALUE</Text>
-            <Text style={styles.detailValue}>{formatCurrency(asset.totalValue)}</Text>
+            <Text style={styles.detailValue}>{formatCurrency(assetData?.totalValue || '0')}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>TOKENIZED</Text>
-            <Text style={styles.detailValue}>{formatCurrency(asset.tokenizedValue)}</Text>
+            <Text style={styles.detailValue}>{formatCurrency(assetData?.tokenizedValue || '0')}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>AVAILABLE</Text>
             <Text style={styles.detailValue}>
-              {formatCurrency(asset.tokenizedValue - ethers.parseEther('1000000'))}
+              {formatCurrency(String(Math.max(0, parseFloat(assetData?.totalValue || '0') - parseFloat(assetData?.tokenizedValue || '0'))))}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -282,14 +392,14 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Expected APY</Text>
               <Text style={[styles.summaryValue, styles.successText]}>
-                {formatYieldRate(asset.yieldRate)}
+                {formatYieldRate(assetData?.yieldRate || 0)}
               </Text>
             </View>
             
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Est. Annual Yield</Text>
               <Text style={[styles.summaryValue, styles.successText]}>
-                {(Number(investmentAmount) * (asset.yieldRate / 10000)).toFixed(2)} MNT
+                {(Number(investmentAmount) * ((assetData?.yieldRate || 0) / 10000)).toFixed(2)} MNT
               </Text>
             </View>
           </View>
@@ -297,7 +407,7 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
 
         {/* Info Box */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>ℹ️ INVESTMENT_TERMS</Text>
+          <Text style={styles.infoTitle}>INVESTMENT_TERMS</Text>
           <Text style={styles.infoText}>• Minimum investment: 100 MNT</Text>
           <Text style={styles.infoText}>• Lock-up period: None (instant liquidity)</Text>
           <Text style={styles.infoText}>• Yield frequency: Monthly distributions</Text>
