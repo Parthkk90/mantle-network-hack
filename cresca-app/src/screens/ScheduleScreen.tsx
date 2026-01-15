@@ -11,6 +11,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import PaymentSchedulerService, { ScheduleType, ScheduleStatus, Schedule } from '../services/PaymentSchedulerService';
 
@@ -364,7 +365,7 @@ export default function ScheduleScreen({ navigation }: any) {
               <View key={payment.id} style={styles.paymentCard}>
                 <View style={styles.paymentHeader}>
                   <View style={styles.paymentLeft}>
-                    <Text style={styles.recurringIcon}>🔄</Text>
+                    <Ionicons name="repeat" size={24} color={COLORS.primary} style={{ marginRight: 8 }} />
                     <View>
                       <Text style={styles.paymentAmount}>{payment.amount} MON</Text>
                       <Text style={styles.paymentRecipient}>To: {payment.recipient}</Text>
@@ -427,7 +428,7 @@ export default function ScheduleScreen({ navigation }: any) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Schedule Payment</Text>
               <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-                <Text style={styles.closeButton}>✕</Text>
+                <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
 

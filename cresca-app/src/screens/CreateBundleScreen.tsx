@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../theme/colors';
 
 interface Asset {
   id: string;
@@ -198,7 +200,7 @@ export default function CreateBundleScreen({ navigation }: any) {
                   <View style={styles.assetItemHeader}>
                     <Text style={styles.assetItemName}>{asset.name}</Text>
                     <TouchableOpacity onPress={() => removeAsset(asset.id)}>
-                      <Text style={styles.removeButton}>✕</Text>
+                      <Ionicons name="close-circle" size={20} color={COLORS.error} />
                     </TouchableOpacity>
                   </View>
                   <View style={styles.allocationInput}>

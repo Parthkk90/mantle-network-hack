@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../theme/colors';
 import KYCService from '../services/KYCService';
@@ -61,7 +62,7 @@ export default function KYCVerificationScreen({ navigation }: any) {
       });
 
       Alert.alert(
-        'Verification Successful! ✅',
+        'Verification Successful!',
         `Your identity has been verified.\n\nTransaction: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
         [
           {
@@ -132,7 +133,7 @@ export default function KYCVerificationScreen({ navigation }: any) {
             {currentStatus.isAccredited && (
               <View style={styles.statusRow}>
                 <Text style={styles.statusLabel}>ACCREDITED</Text>
-                <Text style={[styles.statusValue, styles.accreditedBadge]}>✅ YES</Text>
+                <Text style={[styles.statusValue, styles.accreditedBadge]}>YES</Text>
               </View>
             )}
           </View>
@@ -167,7 +168,7 @@ export default function KYCVerificationScreen({ navigation }: any) {
       </View>
 
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>ℹ️ DEMO_MODE</Text>
+        <Text style={styles.infoTitle}>DEMO_MODE</Text>
         <Text style={styles.infoText}>
           For demo purposes, verification is instant. In production, this would integrate with real KYC providers like Onfido or Sumsub.
         </Text>
@@ -220,7 +221,10 @@ export default function KYCVerificationScreen({ navigation }: any) {
         <Text style={styles.sectionLabel}>{'>> BENEFITS'}</Text>
         <View style={styles.benefitsCard}>
           {tierInfo.benefits.map((benefit, index) => (
-            <Text key={index} style={styles.benefitText}>✓ {benefit}</Text>
+            <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="checkmark" size={16} color={COLORS.success} style={{ marginRight: 8 }} />
+              <Text style={styles.benefitText}>{benefit}</Text>
+            </View>
           ))}
         </View>
       </View>
@@ -232,7 +236,7 @@ export default function KYCVerificationScreen({ navigation }: any) {
             onPress={() => setIsAccredited(!isAccredited)}
           >
             <View style={[styles.checkbox, isAccredited && styles.checkboxChecked]}>
-              {isAccredited && <Text style={styles.checkmark}>✓</Text>}
+              {isAccredited && <Ionicons name="checkmark" size={14} color={COLORS.textWhite} />}
             </View>
             <Text style={styles.checkboxLabel}>
               I am an accredited investor ($200k+ income or $1M+ net worth)
@@ -247,7 +251,7 @@ export default function KYCVerificationScreen({ navigation }: any) {
           onPress={() => setAgreedToTerms(!agreedToTerms)}
         >
           <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
-            {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
+            {agreedToTerms && <Ionicons name="checkmark" size={14} color={COLORS.textWhite} />}
           </View>
           <Text style={styles.checkboxLabel}>
             I agree to the Terms of Service and Privacy Policy

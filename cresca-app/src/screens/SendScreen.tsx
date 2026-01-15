@@ -10,9 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import PaymentService from '../services/PaymentService';
 import WalletService from '../services/WalletService';
+import { useTransactions } from '../context/TransactionContext';
 import { MANTLE_SEPOLIA } from '../config/constants';
 import { COLORS } from '../theme/colors';
 
@@ -22,6 +25,8 @@ export default function SendScreen({ navigation }: any) {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState('0');
+  
+  const { addTransaction } = useTransactions();
 
   useEffect(() => {
     loadBalance();
@@ -49,7 +54,7 @@ export default function SendScreen({ navigation }: any) {
       return;
     }
 
-    Alert.alert('Confirm Transaction', `Send ${amount} MNT to ${recipient}?`, [
+    Alert.alert('Confirm Transaction', `Send ${amount} MNT to ${recipient.slice(0, 8)}...?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Send', onPress: executeSend },
     ]);
@@ -59,21 +64,34 @@ export default function SendScreen({ navigation }: any) {
     setLoading(true);
 
     try {
+      const walletAddress = await WalletService.getAddress();
       const result = await PaymentService.sendMNT({
         recipient,
         amount,
-        note: note || 'Payment via CRESCA',
+        note: note || 'Payment via Cresca',
       });
 
-      if (result.success) {
+      if (result.success && result.transactionHash) {
+        // Save transaction to context
+        await addTransaction({
+          type: 'send',
+          status: 'confirmed',
+          txHash: result.transactionHash,
+          amount: amount,
+          token: 'MNT',
+          from: walletAddress,
+          to: recipient,
+        });
+
         Alert.alert(
-          'Success',
+          'Success!',
           `Payment sent successfully!\n\nTransaction: ${result.transactionHash?.slice(0, 10)}...`,
           [
             {
               text: 'View on Explorer',
-              onPress: () => {
-                console.log(`${MANTLE_SEPOLIA.explorerUrl}/tx/${result.transactionHash}`);
+              onPress: async () => {
+                const url = `${MANTLE_SEPOLIA.explorerUrl}/tx/${result.transactionHash}`;
+                await Linking.openURL(url);
               },
             },
             {
@@ -97,78 +115,129 @@ export default function SendScreen({ navigation }: any) {
     }
   };
 
+  const formatBalance = () => {
+    const usdValue = (parseFloat(balance) * 1.8).toFixed(2);
+    return `$${usdValue} USD`;
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>{'<- BACK'}</Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>{'>> SEND_PAYMENT'}</Text>
+          <Text style={styles.headerTitle}>Send</Text>
+          <View style={styles.headerRight} />
         </View>
 
+        {/* Balance Card */}
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>{'[AVAILABLE_BALANCE]'}</Text>
-          <Text style={styles.balanceAmount}>{balance} MNT</Text>
+          <Text style={styles.balanceLabel}>Available Balance</Text>
+          <Text style={styles.balanceAmount}>{parseFloat(balance).toFixed(4)} MNT</Text>
+          <Text style={styles.balanceUsd}>{formatBalance()}</Text>
         </View>
 
+        {/* Form */}
         <View style={styles.form}>
+          {/* Recipient Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{'>> RECIPIENT_ADDRESS'}</Text>
-            <TextInput
-              style={styles.input}
-              value={recipient}
-              onChangeText={setRecipient}
-              placeholder="0x..."
-              placeholderTextColor={COLORS.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <Text style={styles.label}>Recipient Address</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                value={recipient}
+                onChangeText={setRecipient}
+                placeholder="0x..."
+                placeholderTextColor={COLORS.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity style={styles.scanButton}>
+                <Ionicons name="camera-outline" size={20} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
+          {/* Amount Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{'>> AMOUNT (MNT)'}</Text>
-            <TextInput
-              style={styles.input}
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0.0"
-              placeholderTextColor="#999"
-              keyboardType="decimal-pad"
-            />
-            <TouchableOpacity
-              style={styles.maxButton}
-              onPress={() => setAmount(balance)}
-            >
-              <Text style={styles.maxButtonText}>MAX</Text>
-            </TouchableOpacity>
+            <Text style={styles.label}>Amount</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.amountInput}
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="0.0"
+                placeholderTextColor={COLORS.textMuted}
+                keyboardType="decimal-pad"
+              />
+              <View style={styles.amountRight}>
+                <Text style={styles.currencyLabel}>MNT</Text>
+                <TouchableOpacity
+                  style={styles.maxButton}
+                  onPress={() => setAmount(balance)}
+                >
+                  <Text style={styles.maxButtonText}>MAX</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
 
+          {/* Note Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{'>> NOTE (OPTIONAL)'}</Text>
+            <Text style={styles.label}>Note (Optional)</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.noteInput]}
               value={note}
               onChangeText={setNote}
-              placeholder="Payment for..."
+              placeholder="What's this for?"
               placeholderTextColor={COLORS.textMuted}
               multiline
               numberOfLines={3}
             />
           </View>
 
+          {/* Transaction Summary */}
+          {amount && parseFloat(amount) > 0 && (
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Amount</Text>
+                <Text style={styles.summaryValue}>{amount} MNT</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Network Fee</Text>
+                <Text style={styles.summaryValue}>~0.0001 MNT</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabelBold}>Total</Text>
+                <Text style={styles.summaryValueBold}>
+                  {(parseFloat(amount) + 0.0001).toFixed(4)} MNT
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Send Button */}
           <TouchableOpacity
             style={[styles.sendButton, loading && styles.sendButtonDisabled]}
             onPress={handleSend}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.background} />
+              <ActivityIndicator color={COLORS.textWhite} />
             ) : (
-              <Text style={styles.sendButtonText}>{'[ SEND_PAYMENT ]'}</Text>
+              <>
+                <Ionicons name="arrow-up" size={20} color={COLORS.textWhite} />
+                <Text style={styles.sendButtonText}>Send Payment</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -184,109 +253,189 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 40,
   },
   header: {
-    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: COLORS.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 16,
   },
   backButton: {
-    marginBottom: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  backIcon: {
+    fontSize: 20,
+    color: COLORS.text,
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    color: COLORS.text,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  headerRight: {
+    width: 40,
   },
   balanceCard: {
-    backgroundColor: COLORS.cardBackground,
-    margin: 16,
-    padding: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
   },
   balanceLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: COLORS.textMuted,
     marginBottom: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   balanceAmount: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontSize: 32,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  balanceUsd: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
   },
   form: {
-    padding: 16,
+    paddingHorizontal: 20,
   },
   inputGroup: {
-    marginBottom: 24,
-    position: 'relative',
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
     color: COLORS.text,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
-  input: {
-    backgroundColor: COLORS.cardBackground,
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 14,
-    color: COLORS.textWhite,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    borderRadius: 12,
+    paddingRight: 8,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
+  input: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: COLORS.text,
+  },
+  amountInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 24,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  amountRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 8,
+  },
+  currencyLabel: {
+    fontSize: 16,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  scanButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanIcon: {
+    fontSize: 18,
   },
   maxButton: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 6,
   },
   maxButtonText: {
-    color: COLORS.background,
-    fontWeight: '700',
+    color: COLORS.textWhite,
+    fontWeight: '600',
     fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  noteInput: {
+    height: 80,
+    textAlignVertical: 'top',
+    paddingTop: 16,
+  },
+  summaryCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 8,
+  },
+  summaryLabelBold: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  summaryValueBold: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '700',
   },
   sendButton: {
-    backgroundColor: COLORS.primary,
-    padding: 18,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    justifyContent: 'center',
+    backgroundColor: COLORS.text,
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
   },
   sendButtonDisabled: {
     backgroundColor: COLORS.textMuted,
-    borderColor: COLORS.textMuted,
+  },
+  sendIcon: {
+    fontSize: 18,
+    color: COLORS.textWhite,
   },
   sendButtonText: {
-    color: COLORS.background,
+    color: COLORS.textWhite,
     fontSize: 16,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontWeight: '600',
   },
 });

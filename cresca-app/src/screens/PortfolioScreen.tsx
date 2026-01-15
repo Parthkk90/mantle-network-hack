@@ -1,17 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
   TouchableOpacity,
   Platform,
+  TextInput,
 } from 'react-native';
-import WalletService from '../services/WalletService';
-import BundleService, { Bundle } from '../services/BundleService';
+import { Ionicons } from '@expo/vector-icons';
+import { useBundles, getRiskLevel, filterByCategory, BundleCategory, BUNDLE_CATEGORIES } from '../hooks/useBundles';
+import { useUserInvestments } from '../hooks/useBundles';
+import { Bundle } from '../services/BundleService';
 import { COLORS } from '../theme/colors';
+import { BundlesScreenSkeleton } from '../components/Shimmer';
+import AnimatedNumber from '../components/AnimatedNumber';
+import FadeInView from '../components/FadeInView';
+import AnimatedPressable from '../components/AnimatedPressable';
 
 interface Investment {
   bundleId: string;
@@ -24,80 +30,90 @@ interface Investment {
 }
 
 export default function PortfolioScreen({ navigation }: any) {
-  const [investments, setInvestments] = useState<Investment[]>([]);
-  const [availableBundles, setAvailableBundles] = useState<Bundle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [totalBalance, setTotalBalance] = useState('0');
-  const [totalProfit, setTotalProfit] = useState('0');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
-  useEffect(() => {
-    loadPortfolio();
-  }, []);
+  // Use hooks for data fetching with caching
+  const { 
+    data: allBundles, 
+    loading: bundlesLoading, 
+    refresh: refreshBundles 
+  } = useBundles();
 
-  const loadPortfolio = async () => {
-    try {
-      // Fetch user's investments from BundleService
-      const userBundles = await BundleService.getUserInvestments();
-      
-      // Transform to Investment format
-      const transformedInvestments: Investment[] = userBundles.map(bundle => {
-        const invested = parseFloat(bundle.userInvestment || '0');
-        // Estimate current value based on APY (simplified)
-        const currentValue = invested * (1 + parseFloat(bundle.apy) / 100 / 12);
-        const profit = currentValue - invested;
-        const profitPercent = invested > 0 ? (profit / invested) * 100 : 0;
-        
-        return {
-          bundleId: bundle.id,
-          bundleName: bundle.name,
-          invested: invested.toFixed(2),
-          currentValue: currentValue.toFixed(2),
-          profit: profit.toFixed(2),
-          profitPercent: profitPercent.toFixed(2),
-          apy: bundle.apy,
-        };
-      });
-      
-      setInvestments(transformedInvestments);
-      
-      // Calculate totals
-      const totalValue = transformedInvestments.reduce(
-        (sum, inv) => sum + parseFloat(inv.currentValue),
-        0
-      );
-      const totalProf = transformedInvestments.reduce(
-        (sum, inv) => sum + parseFloat(inv.profit),
-        0
-      );
-      
-      setTotalBalance(totalValue.toFixed(2));
-      setTotalProfit(totalProf.toFixed(2));
-      
-      // Also load available bundles to browse
-      const allBundles = await BundleService.getAllBundles();
-      setAvailableBundles(allBundles);
-    } catch (error) {
-      console.error('Load portfolio error:', error);
-      setInvestments([]);
-      setAvailableBundles([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const {
+    data: userInvestments,
+    loading: investmentsLoading,
+    refresh: refreshInvestments,
+  } = useUserInvestments();
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadPortfolio();
-  };
+  // Transform user investments
+  const investments = useMemo((): Investment[] => {
+    if (!userInvestments) return [];
+    return userInvestments.map(bundle => {
+      const invested = parseFloat(bundle.userInvestment || '0');
+      const currentValue = invested * (1 + parseFloat(bundle.apy) / 100 / 12);
+      const profit = currentValue - invested;
+      const profitPercent = invested > 0 ? (profit / invested) * 100 : 0;
+      
+      return {
+        bundleId: bundle.id,
+        bundleName: bundle.name,
+        invested: invested.toFixed(2),
+        currentValue: currentValue.toFixed(2),
+        profit: profit.toFixed(2),
+        profitPercent: profitPercent.toFixed(2),
+        apy: bundle.apy,
+      };
+    });
+  }, [userInvestments]);
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+  // Calculate totals
+  const { totalBalance, totalProfit } = useMemo(() => {
+    const totalValue = investments.reduce(
+      (sum, inv) => sum + parseFloat(inv.currentValue),
+      0
     );
+    const totalProf = investments.reduce(
+      (sum, inv) => sum + parseFloat(inv.profit),
+      0
+    );
+    return {
+      totalBalance: totalValue.toFixed(2),
+      totalProfit: totalProf.toFixed(2),
+    };
+  }, [investments]);
+
+  // Filter bundles by search only (no categories)
+  const filteredBundles = useMemo(() => {
+    if (!allBundles) return [];
+    
+    if (searchQuery) {
+      return allBundles.filter(bundle =>
+        bundle.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    return allBundles;
+  }, [allBundles, searchQuery]);
+
+  const onRefresh = useCallback(async () => {
+    await Promise.all([refreshBundles(), refreshInvestments()]);
+  }, [refreshBundles, refreshInvestments]);
+
+  const getRiskDisplay = (apy: string) => {
+    const level = getRiskLevel(apy);
+    const colors = {
+      Low: '#22C55E',
+      Medium: '#F59E0B',
+      High: '#EF4444',
+    };
+    return { label: `${level} Risk`, color: colors[level] };
+  };
+
+  // Show shimmer during initial load
+  const isInitialLoading = bundlesLoading && !allBundles;
+  if (isInitialLoading) {
+    return <BundlesScreenSkeleton />;
   }
 
   return (
@@ -105,173 +121,161 @@ export default function PortfolioScreen({ navigation }: any) {
       style={styles.container}
       refreshControl={
         <RefreshControl 
-          refreshing={refreshing} 
+          refreshing={bundlesLoading && !!allBundles}
           onRefresh={onRefresh}
           tintColor={COLORS.primary}
         />
       }
+      showsVerticalScrollIndicator={false}
     >
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>{'>> MY_PORTFOLIO'}</Text>
-        <Text style={styles.subtitle}>INVESTMENT_TRACKING</Text>
+        <View>
+          <Text style={styles.title}>Investment Bundles</Text>
+          <Text style={styles.subtitle}>Diversified crypto portfolios</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.searchButton}
+          onPress={() => setShowSearch(!showSearch)}
+        >
+          <Ionicons name="search" size={20} color={COLORS.text} />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.totalCard}>
-        <Text style={styles.totalLabel}>{'[TOTAL_VALUE]'}</Text>
-        <Text style={styles.totalAmount}>{totalBalance} MNT</Text>
-        <View style={styles.profitContainer}>
-          <Text style={[styles.profitText, parseFloat(totalProfit) >= 0 ? styles.profitPositive : styles.profitNegative]}>
-            {parseFloat(totalProfit) >= 0 ? '+' : ''}{totalProfit} MNT
-          </Text>
+      {/* Search Input */}
+      {showSearch && (
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search bundles..."
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
-      </View>
+      )}
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{'>> INVESTMENTS'}</Text>
-          <Text style={styles.sectionCount}>[{investments.length}]</Text>
-        </View>
-
-        {investments.length === 0 ? (
+      {/* Bundle Cards */}
+      <View style={styles.bundlesContainer}>
+        {filteredBundles.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>{'[NO_INVESTMENTS]'}</Text>
-            <Text style={styles.emptyText}>
-              START_INVESTING_IN_BUNDLES_BELOW
-            </Text>
+            <Ionicons name="cube-outline" size={48} color={COLORS.textMuted} />
+            <Text style={styles.emptyText}>No bundles found</Text>
+            <Text style={styles.emptySubtext}>Try a different category or search term</Text>
           </View>
         ) : (
-          investments.map((investment) => (
-            <TouchableOpacity
-              key={investment.bundleId}
-              style={styles.investmentCard}
-              onPress={() => {
-                navigation.navigate('BundleDetails', {
-                  bundle: {
-                    id: investment.bundleId,
-                    name: investment.bundleName,
-                    apy: investment.apy,
-                  }
-                });
-              }}
-            >
-              <View style={styles.investmentHeader}>
-                <Text style={styles.investmentName}>{investment.bundleName.toUpperCase()}</Text>
-                <Text style={styles.investmentApy}>{investment.apy}%</Text>
-              </View>
+          filteredBundles.map((bundle, index) => {
+            const risk = getRiskDisplay(bundle.apy);
+            return (
+              <FadeInView key={bundle.id} delay={index * 100}>
+                <AnimatedPressable
+                  style={styles.bundleCard}
+                  onPress={() => navigation.navigate('BundleDetails', { bundle })}
+                >
+                  <View style={styles.bundleCardHeader}>
+                    <View style={styles.bundleIconContainer}>
+                      <View style={styles.bundleIcon}>
+                        <Ionicons name="pie-chart" size={20} color={COLORS.primary} />
+                      </View>
+                    </View>
+                    <View style={styles.bundleInfo}>
+                      <Text style={styles.bundleName}>{bundle.name}</Text>
+                      <Text style={styles.bundleComposition}>{bundle.composition}</Text>
+                    </View>
+                    <View style={styles.bundleReturn}>
+                      <AnimatedNumber 
+                        value={parseFloat(bundle.apy)} 
+                        style={styles.returnValue}
+                        suffix="%"
+                        decimals={1}
+                      />
+                      <Text style={styles.returnLabel}>1Y Return</Text>
+                    </View>
+                  </View>
 
-              <View style={styles.investmentStats}>
-                <View style={styles.investmentStat}>
-                  <Text style={styles.investmentStatLabel}>INVESTED</Text>
-                  <Text style={styles.investmentStatValue}>
-                    {parseFloat(investment.invested).toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.investmentStat}>
-                  <Text style={styles.investmentStatLabel}>CURRENT</Text>
-                  <Text style={styles.investmentStatValue}>
-                    {parseFloat(investment.currentValue).toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.investmentStat}>
-                  <Text style={styles.investmentStatLabel}>PROFIT</Text>
-                  <Text style={[
-                    styles.investmentStatValue,
-                    parseFloat(investment.profit) >= 0 ? styles.profitPositive : styles.profitNegative
-                  ]}>
-                    {parseFloat(investment.profit) >= 0 ? '+' : ''}
-                    {parseFloat(investment.profit).toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
+                  <View style={styles.bundleTags}>
+                    {bundle.composition.split(' • ').slice(0, 3).map((token, idx) => (
+                      <View key={idx} style={styles.tokenTag}>
+                        <Text style={styles.tokenTagText}>{token}</Text>
+                      </View>
+                    ))}
+                    <View style={[styles.riskTag, { backgroundColor: risk.color + '20' }]}>
+                      <Text style={[styles.riskTagText, { color: risk.color }]}>{risk.label.split(' ')[0]}</Text>
+                    </View>
+                  </View>
+                </AnimatedPressable>
+              </FadeInView>
+            );
+          })
         )}
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{'>> BROWSE_BUNDLES'}</Text>
-          <Text style={styles.sectionCount}>[{availableBundles.length}]</Text>
-        </View>
+      {/* My Investments Section */}
+      {investments.length > 0 && (
+        <FadeInView delay={filteredBundles.length * 100 + 100}>
+          <View style={styles.investmentsSection}>
+            <Text style={styles.sectionTitle}>My Investments</Text>
+            
+            {investments.map((investment, index) => (
+              <FadeInView key={investment.bundleId} delay={filteredBundles.length * 100 + 200 + index * 50}>
+                <AnimatedPressable
+                  style={styles.investmentCard}
+                  onPress={() => {
+                    navigation.navigate('BundleDetails', {
+                      bundle: {
+                        id: investment.bundleId,
+                        name: investment.bundleName,
+                        apy: investment.apy,
+                      }
+                    });
+                  }}
+                >
+                  <View style={styles.investmentLeft}>
+                    <Text style={styles.investmentName}>{investment.bundleName}</Text>
+                    <Text style={styles.investmentInvested}>
+                      Invested: {investment.invested} MNT
+                    </Text>
+                  </View>
+                  <View style={styles.investmentRight}>
+                    <Text style={[
+                      styles.investmentProfit,
+                      parseFloat(investment.profit) >= 0 ? styles.profitPositive : styles.profitNegative
+                    ]}>
+                      {parseFloat(investment.profit) >= 0 ? '+' : ''}{investment.profitPercent}%
+                    </Text>
+                    <Text style={styles.investmentCurrent}>{investment.currentValue} MNT</Text>
+                  </View>
+                </AnimatedPressable>
+              </FadeInView>
+            ))}
 
-        {availableBundles.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              NO_BUNDLES_AVAILABLE
-            </Text>
-          </View>
-        ) : (
-          availableBundles.map((bundle) => (
-            <TouchableOpacity
-              key={bundle.id}
-              style={styles.bundleCard}
-              onPress={() => {
-                navigation.navigate('BundleDetails', { bundle });
-              }}
-            >
-              <View style={styles.bundleHeader}>
-                <Text style={styles.bundleName}>{bundle.name.toUpperCase()}</Text>
-                <View style={styles.apyBadge}>
-                  <Text style={styles.apyText}>{bundle.apy}%</Text>
-                </View>
-              </View>
-
-              <Text style={styles.bundleComposition}>{bundle.composition}</Text>
-
-              <View style={styles.bundleStats}>
-                <View style={styles.bundleStat}>
-                  <Text style={styles.bundleStatLabel}>TVL</Text>
-                  <Text style={styles.bundleStatValue}>${parseFloat(bundle.tvl).toLocaleString()}</Text>
-                </View>
-                <View style={styles.bundleStat}>
-                  <Text style={styles.bundleStatLabel}>APY</Text>
-                  <Text style={styles.bundleStatValue}>{bundle.apy}%</Text>
-                </View>
-                <View style={styles.bundleStat}>
-                  <Text style={styles.bundleStatLabel}>LEVERAGE</Text>
-                  <Text style={styles.bundleStatValue}>{bundle.leverage || 1}x</Text>
-                </View>
-                <View style={styles.bundleStat}>
-                  <Text style={styles.bundleStatLabel}>POSITION</Text>
-                  <Text style={[
-                    styles.bundleStatValue,
-                    bundle.position === 'long' ? styles.positionLong : styles.positionShort
-                  ]}>
-                    {(bundle.position || 'LONG').toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{'>> SUMMARY'}</Text>
-        
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>TOTAL_INVESTED</Text>
-            <Text style={styles.summaryValue}>
-              {investments.reduce((sum, inv) => sum + parseFloat(inv.invested), 0).toFixed(2)}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>TOTAL_PROFIT</Text>
-            <Text style={[styles.summaryValue, styles.profitPositive]}>
-              +{totalProfit}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>AVG_APY</Text>
-            <Text style={styles.summaryValue}>
-              {investments.length > 0
-                ? (investments.reduce((sum, inv) => sum + parseFloat(inv.apy), 0) / investments.length).toFixed(2)
-                : '0'}%
-            </Text>
+          {/* Summary Card */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Value</Text>
+              <AnimatedNumber 
+                value={parseFloat(totalBalance)} 
+                style={styles.summaryValue}
+                suffix=" MNT"
+                decimals={2}
+              />
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Profit</Text>
+              <AnimatedNumber 
+                value={parseFloat(totalProfit)} 
+                style={StyleSheet.flatten([styles.summaryValue, styles.profitPositive])}
+                prefix="+"
+                suffix=" MNT"
+                decimals={2}
+              />
+            </View>
           </View>
         </View>
-      </View>
+      </FadeInView>
+      )}
+
+      <View style={styles.bottomSpacer} />
     </ScrollView>
   );
 }
@@ -288,172 +292,237 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: COLORS.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.text,
     marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   subtitle: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  totalCard: {
-    backgroundColor: COLORS.cardBackground,
-    margin: 16,
-    padding: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginBottom: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  totalAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  profitContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profitText: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  profitPositive: {
-    color: COLORS.primary,
-  },
-  profitNegative: {
-    color: COLORS.error,
-  },
-  section: {
-    backgroundColor: COLORS.cardBackground,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  sectionCount: {
     fontSize: 14,
     color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  searchButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchIcon: {
+    fontSize: 18,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  searchInput: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  categoryContainer: {
+    marginBottom: 20,
+  },
+  categoryScroll: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  categoryChip: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 8,
+  },
+  categoryChipActive: {
+    backgroundColor: COLORS.text,
+    borderColor: COLORS.text,
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+  },
+  categoryTextActive: {
+    color: COLORS.textWhite,
+  },
+  bundlesContainer: {
+    paddingHorizontal: 20,
   },
   emptyState: {
+    padding: 40,
     alignItems: 'center',
-    paddingVertical: 48,
   },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.textMuted,
-    marginBottom: 16,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
   emptyText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    marginBottom: 24,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  browseButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  browseButtonText: {
+  emptySubtext: {
     fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.background,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    color: COLORS.textMuted,
   },
-  investmentCard: {
+  bundleCard: {
     backgroundColor: COLORS.background,
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  investmentHeader: {
+  bundleCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  bundleIconContainer: {
+    marginRight: 12,
+  },
+  bundleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bundleIconText: {
+    fontSize: 20,
+  },
+  bundleInfo: {
+    flex: 1,
+  },
+  bundleName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  bundleComposition: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  bundleReturn: {
+    alignItems: 'flex-end',
+  },
+  returnValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.accentGreen,
+    marginBottom: 2,
+  },
+  returnLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  bundleTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tokenTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+  },
+  tokenTagText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  riskTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  riskTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  investmentsSection: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  investmentCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  investmentLeft: {
+    flex: 1,
   },
   investmentName: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
     color: COLORS.text,
-    flex: 1,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  investmentApy: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  investmentStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  investmentStat: {
-    flex: 1,
-  },
-  investmentStatLabel: {
-    fontSize: 10,
-    color: COLORS.textMuted,
     marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
-  investmentStatValue: {
-    fontSize: 14,
+  investmentInvested: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  investmentRight: {
+    alignItems: 'flex-end',
+  },
+  investmentProfit: {
+    fontSize: 15,
     fontWeight: '600',
-    color: COLORS.textWhite,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    marginBottom: 2,
+  },
+  investmentCurrent: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  profitPositive: {
+    color: COLORS.accentGreen,
+  },
+  profitNegative: {
+    color: COLORS.accentRed,
   },
   summaryCard: {
-    backgroundColor: COLORS.background,
-    padding: 16,
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginTop: 16,
+    padding: 16,
+    marginTop: 8,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -461,78 +530,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   summaryLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontSize: 14,
+    color: COLORS.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textWhite,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  bundleCard: {
-    backgroundColor: COLORS.background,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  bundleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  bundleName: {
-    fontSize: 16,
-    fontWeight: 'bold',
     color: COLORS.text,
-    flex: 1,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
-  apyBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  apyText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: COLORS.background,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  bundleComposition: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginBottom: 16,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  bundleStats: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  bundleStat: {
-    flex: 1,
-  },
-  bundleStatLabel: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  bundleStatValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  positionLong: {
-    color: COLORS.primary,
-  },
-  positionShort: {
-    color: COLORS.error,
+  bottomSpacer: {
+    height: 100,
   },
 });
