@@ -8,8 +8,11 @@ import {
   Share,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import WalletService from '../services/WalletService';
 import { COLORS } from '../theme/colors';
+import QRCode from '../components/QRCode';
 
 export default function ReceiveScreen({ navigation }: any) {
   const [address, setAddress] = useState('');
@@ -23,14 +26,20 @@ export default function ReceiveScreen({ navigation }: any) {
     setAddress(addr);
   };
 
-  const handleCopyAddress = () => {
-    Alert.alert('Copied', 'Address copied to clipboard');
+  const handleCopyAddress = async () => {
+    try {
+      await Clipboard.setStringAsync(address);
+      Alert.alert('Copied!', 'Address copied to clipboard');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to copy address');
+    }
   };
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Send MNT to my CRESCA wallet:\n${address}`,
+        message: `Send crypto to my wallet:\n${address}`,
+        title: 'My Wallet Address',
       });
     } catch (error) {
       console.error('Share error:', error);
@@ -39,45 +48,61 @@ export default function ReceiveScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>{'<- BACK'}</Text>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>{'>> RECEIVE_PAYMENT'}</Text>
+        <Text style={styles.headerTitle}>Receive</Text>
+        <View style={styles.headerRight} />
       </View>
 
+      {/* Content */}
       <View style={styles.content}>
-        <View style={styles.qrPlaceholder}>
-          <Text style={styles.qrText}>{'[ QR_CODE ]'}</Text>
-          <Text style={styles.qrSubtext}>SCAN_TO_SEND_MNT</Text>
-        </View>
-
-        <View style={styles.addressCard}>
-          <Text style={styles.addressLabel}>{'>> YOUR_WALLET_ADDRESS'}</Text>
-          <Text style={styles.addressText}>{address}</Text>
-        </View>
-
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleCopyAddress}>
-            <Text style={styles.actionButtonText}>{'[ COPY_ADDRESS ]'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.shareButton]}
-            onPress={handleShare}
-          >
-            <Text style={styles.actionButtonText}>{'[ SHARE ]'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>{'>> HOW_TO_RECEIVE'}</Text>
-          <Text style={styles.infoText}>
-            {'1. Share wallet address\n2. Wait for confirmation\n3. MNT appears in balance'}
+        {/* QR Code Card */}
+        <View style={styles.qrCard}>
+          <View style={styles.qrContainer}>
+            {address ? (
+              <QRCode 
+                value={address} 
+                size={180} 
+                backgroundColor="#FFFFFF"
+                color="#000000"
+              />
+            ) : (
+              <View style={styles.qrLoading}>
+                <Ionicons name="qr-code" size={48} color={COLORS.primary} />
+                <Text style={styles.qrLoadingText}>Loading...</Text>
+              </View>
+            )}
+          </View>
+          
+          {/* Address Display */}
+          <View style={styles.addressContainer}>
+            <Text style={styles.addressLabel}>Your Wallet Address</Text>
+            <Text style={styles.addressText}>
+              {address ? `${address.slice(0, 10)}...${address.slice(-8)}` : 'Loading...'}
+            </Text>
+          </View>
+          
+          <Text style={styles.qrDescription}>
+            Scan this QR code to receive crypto to your wallet
           </Text>
-        </View>
 
-        <Text style={styles.networkInfo}>{'[MANTLE_SEPOLIA_TESTNET]'}</Text>
+          {/* Share Button */}
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+            <Ionicons name="share-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.shareText}>Share Address</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Copy Address Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.copyButton} onPress={handleCopyAddress}>
+          <Ionicons name="copy-outline" size={20} color={COLORS.textWhite} />
+          <Text style={styles.copyButtonText}>Copy Address</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -89,125 +114,127 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: COLORS.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 16,
   },
   backButton: {
-    marginBottom: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  backIcon: {
+    fontSize: 20,
+    color: COLORS.text,
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    color: COLORS.text,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  headerRight: {
+    width: 40,
   },
   content: {
     flex: 1,
-    padding: 24,
-  },
-  qrPlaceholder: {
-    width: '100%',
-    aspectRatio: 1,
-    maxWidth: 300,
-    alignSelf: 'center',
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
+    paddingHorizontal: 20,
     justifyContent: 'center',
+  },
+  qrCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 32,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-  },
-  qrText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  qrSubtext: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  addressCard: {
-    backgroundColor: COLORS.cardBackground,
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 24,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  qrContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  qrLoading: {
+    width: 180,
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+  },
+  qrLoadingText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    marginTop: 8,
+  },
+  addressContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
   addressLabel: {
     fontSize: 12,
-    color: COLORS.textMuted,
-    marginBottom: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   addressText: {
-    fontSize: 13,
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    lineHeight: 20,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginBottom: 24,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  shareButton: {
-    backgroundColor: COLORS.cardBackground,
-    borderColor: COLORS.primary,
-  },
-  actionButtonText: {
-    color: COLORS.background,
-    fontSize: 13,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  infoCard: {
-    backgroundColor: COLORS.cardBackground,
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  infoTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  infoText: {
-    fontSize: 12,
+  qrDescription: {
+    fontSize: 13,
     color: COLORS.textSecondary,
-    lineHeight: 20,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  networkInfo: {
     textAlign: 'center',
-    fontSize: 11,
-    color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    lineHeight: 20,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 12,
+  },
+  shareText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 20,
+  },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  copyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textWhite,
   },
 });
