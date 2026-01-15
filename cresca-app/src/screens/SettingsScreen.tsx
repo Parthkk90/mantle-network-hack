@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,116 +8,150 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
 
 interface SettingsScreenProps {
   navigation: any;
 }
 
+interface SettingItem {
+  id: string;
+  label: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
-  const handleSettingPress = (setting: string) => {
+  const [userName] = useState('Pascal');
+  const { logout } = useAuth();
+
+  const handleSettingPress = (setting: SettingItem) => {
     Alert.alert(
-      setting.toUpperCase(),
-      `${setting} settings will be implemented soon.`,
+      setting.label,
+      `${setting.label} settings will be implemented soon.`,
       [{ text: 'OK' }]
     );
   };
 
-  const settingsSections = [
-    {
-      title: '>> ACCOUNT',
-      items: [
-        { id: 'wallet', label: 'Wallet Settings', icon: '⚙' },
-        { id: 'security', label: 'Security & Privacy', icon: '🔒' },
-        { id: 'backup', label: 'Backup & Recovery', icon: '💾' },
-      ],
+  const settingsItems: SettingItem[] = [
+    { 
+      id: 'wallet', 
+      label: 'Wallet Settings', 
+      description: 'Manage your wallet preferences',
+      icon: 'settings-outline' 
     },
-    {
-      title: '>> PREFERENCES',
-      items: [
-        { id: 'notifications', label: 'Notifications', icon: '🔔' },
-        { id: 'network', label: 'Network Settings', icon: '🌐' },
-        { id: 'currency', label: 'Currency', icon: '💱' },
-      ],
+    { 
+      id: 'security', 
+      label: 'Security & Privacy', 
+      description: 'Backup, recovery, and security',
+      icon: 'lock-closed-outline' 
     },
-    {
-      title: '>> SUPPORT',
-      items: [
-        { id: 'help', label: 'Help & Support', icon: '❓' },
-        { id: 'about', label: 'About', icon: 'ℹ' },
-        { id: 'terms', label: 'Terms & Conditions', icon: '📄' },
-      ],
+    { 
+      id: 'notifications', 
+      label: 'Notifications', 
+      description: 'Transaction and price alerts',
+      icon: 'notifications-outline' 
+    },
+    { 
+      id: 'network', 
+      label: 'Network Settings', 
+      description: 'Switch between networks',
+      icon: 'globe-outline' 
+    },
+    { 
+      id: 'help', 
+      label: 'Help & Support', 
+      description: 'Get help and contact support',
+      icon: 'help-circle-outline' 
     },
   ];
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout? This will remove your wallet from this device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>{'>> SETTINGS'}</Text>
+        <View>
+          <Text style={styles.title}>Profile</Text>
+          <Text style={styles.subtitle}>Account & Settings</Text>
+        </View>
+        <TouchableOpacity style={styles.editButton}>
+          <Ionicons name="pencil" size={20} color={COLORS.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Profile Card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>C</Text>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={28} color={COLORS.textWhite} />
+            </View>
+            <View style={styles.onlineIndicator} />
           </View>
-          <Text style={styles.userName}>CRESCA_USER</Text>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>{'[ EDIT_PROFILE ]'}</Text>
-          </TouchableOpacity>
+          <Text style={styles.userName}>{userName}</Text>
         </View>
 
-        {settingsSections.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            {section.items.map((item, itemIndex) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.settingItem,
-                  itemIndex === section.items.length - 1 && styles.settingItemLast,
-                ]}
-                onPress={() => handleSettingPress(item.label)}
-              >
-                <View style={styles.settingLeft}>
-                  <View style={styles.iconContainer}>
-                    <Text style={styles.icon}>{item.icon}</Text>
-                  </View>
-                  <Text style={styles.settingLabel}>{item.label.toUpperCase()}</Text>
+        {/* Settings List */}
+        <View style={styles.settingsList}>
+          {settingsItems.map((item, index) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.settingItem,
+                index === settingsItems.length - 1 && styles.settingItemLast
+              ]}
+              onPress={() => handleSettingPress(item)}
+            >
+              <View style={styles.settingLeft}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name={item.icon} size={22} color={COLORS.primary} />
                 </View>
-                <Text style={styles.arrow}>{'>'}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ))}
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingLabel}>{item.label}</Text>
+                  <Text style={styles.settingDescription}>{item.description}</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={() => {
-            Alert.alert(
-              'LOGOUT',
-              'Are you sure you want to logout?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Logout',
-                  style: 'destructive',
-                  onPress: () => {
-                    // Handle logout
-                    console.log('User logged out');
-                  },
-                },
-              ]
-            );
-          }}
-        >
-          <Text style={styles.logoutButtonText}>{'[ LOGOUT ]'}</Text>
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
 
+        {/* Version Info */}
         <View style={styles.versionInfo}>
-          <Text style={styles.versionText}>VERSION 1.0.0</Text>
-          <Text style={styles.versionText}>CRESCA © 2024</Text>
+          <Text style={styles.versionText}>Version 1.0.0</Text>
+          <Text style={styles.versionText}>Cresca © 2026</Text>
         </View>
+
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
   );
@@ -129,82 +163,85 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: COLORS.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    letterSpacing: 2,
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+  editButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  editIcon: {
+    fontSize: 18,
   },
   scrollContent: {
     flex: 1,
   },
   profileCard: {
     alignItems: 'center',
-    padding: 32,
-    backgroundColor: COLORS.cardBackground,
-    margin: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingVertical: 32,
+    marginHorizontal: 20,
+    marginBottom: 24,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primary,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: COLORS.background,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 16,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  editButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  editButtonText: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  section: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: COLORS.border,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    padding: 16,
+  avatarIcon: {
+    fontSize: 48,
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.accentGreen,
+    borderWidth: 3,
+    borderColor: COLORS.background,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  settingsList: {
+    marginHorizontal: 20,
     backgroundColor: COLORS.background,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
   },
   settingItem: {
     flexDirection: 'row',
@@ -212,7 +249,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.divider,
   },
   settingItemLast: {
     borderBottomWidth: 0,
@@ -223,52 +260,58 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.background,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   icon: {
     fontSize: 20,
   },
+  settingInfo: {
+    flex: 1,
+  },
   settingLabel: {
-    fontSize: 13,
+    fontSize: 16,
     color: COLORS.text,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: COLORS.textMuted,
   },
   arrow: {
-    fontSize: 18,
+    fontSize: 24,
     color: COLORS.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    marginLeft: 8,
   },
   logoutButton: {
-    marginHorizontal: 16,
-    marginVertical: 24,
+    marginHorizontal: 20,
+    marginTop: 24,
     padding: 16,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.error,
   },
   logoutButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.error,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontWeight: '600',
+    color: COLORS.accentRed,
   },
   versionInfo: {
     alignItems: 'center',
-    paddingBottom: 32,
+    paddingVertical: 24,
   },
   versionText: {
-    fontSize: 11,
+    fontSize: 13,
     color: COLORS.textMuted,
     marginBottom: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  bottomSpacer: {
+    height: 100,
   },
 });
