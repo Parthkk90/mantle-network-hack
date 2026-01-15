@@ -98,15 +98,16 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
       await WalletService.loadWallet();
       const signer = WalletService.getWallet();
       
-      // REAL TESTNET TRANSACTION: Send investment amount to RWAVault
-      // In production, this would be a dedicated InvestmentManager contract
-      // that receives payment and mints tokens atomically
+      // REAL TESTNET TRANSACTION: Send investment to treasury address
+      // Treasury will hold investments and facilitate token distribution
+      // In production: InvestmentManager contract handles payment + minting atomically
+      
+      // Investment treasury address (deployer/admin address for testnet)
+      const INVESTMENT_TREASURY = '0x50921Cd1D05a3C7C95B75C6fa1008761C59eb85d';
       
       const tx = await signer.sendTransaction({
-        to: '0xC3c278BaE4CCe83e467c388Ea8302eEC119c7a63', // RWAVault address
+        to: INVESTMENT_TREASURY,
         value: ethers.parseEther(investmentAmount),
-        // Adding data field to identify this as an investment
-        data: ethers.id(`invest:${asset.tokenId}:${userAddress}`).slice(0, 10),
       });
 
       // Wait for transaction confirmation
@@ -118,15 +119,8 @@ export default function RWAInvestmentScreen({ route, navigation }: any) {
 
       Alert.alert(
         'Investment Successful! 🎉',
-        `Your investment of ${investmentAmount} MNT has been sent to the RWA Vault.\n\nTransaction Hash:\n${tx.hash}\n\nView on Mantlescan:\nhttps://sepolia.mantlescan.xyz/tx/${tx.hash}\n\n📝 Note: In a production environment, RWA tokens would be minted to your wallet automatically. For this testnet demo, the vault custodian would mint tokens to investors after payment verification.`,
+        `Your investment of ${investmentAmount} MNT in ${asset.name} has been confirmed!\n\nTransaction Hash:\n${tx.hash.slice(0, 20)}...\n\nBlock: ${receipt.blockNumber}\n\nView on Mantlescan:\nhttps://sepolia.mantlescan.xyz/tx/${tx.hash}\n\n✅ This is a REAL transaction on Mantle Sepolia testnet!\n\n📝 In production: RWA tokens are minted automatically via InvestmentManager contract.`,
         [
-          {
-            text: 'View on Explorer',
-            onPress: () => {
-              // In production, would open URL
-              Alert.alert('Explorer', `Transaction: ${tx.hash}`);
-            },
-          },
           {
             text: 'View Portfolio',
             onPress: () => navigation.navigate('Main', { screen: 'RWATab' }),
