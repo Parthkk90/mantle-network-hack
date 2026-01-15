@@ -94,4 +94,6 @@ class WalletService {
   }
 }
 
-export default new WalletService();
+// Export both as named and default
+export const walletService = new WalletService();
+export default walletService;

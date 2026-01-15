@@ -441,4 +441,6 @@ class BundleService {
   }
 }
 
-export default new BundleService();
+// Export both as named and default
+export const bundleService = new BundleService();
+export default bundleService;

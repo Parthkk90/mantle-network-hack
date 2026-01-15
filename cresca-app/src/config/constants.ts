@@ -8,7 +8,24 @@ export const MANTLE_SEPOLIA = {
     symbol: 'MNT',
     decimals: 18,
   },
+  isTestnet: true,
 };
+
+export const MANTLE_MAINNET = {
+  chainId: 5000,
+  name: 'Mantle',
+  rpcUrl: 'https://rpc.mantle.xyz',
+  explorerUrl: 'https://mantlescan.xyz',
+  currency: {
+    name: 'MNT',
+    symbol: 'MNT',
+    decimals: 18,
+  },
+  isTestnet: false,
+};
+
+// Network type
+export type NetworkConfig = typeof MANTLE_SEPOLIA | typeof MANTLE_MAINNET;
 
 export const PAYMENT_PROCESSOR_ADDRESS = '0x7D7A1bbD55c6A2e1F23cD711B319F377D09D93f8';
 

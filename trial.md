@@ -36,3 +36,11 @@ Starting Metro Bundler
 
 Logs for your project will appear below. Press Ctrl+C to exit.
 Android .\index.ts ▓▓▓▓░░░░░░░░░░░░ 25.5% (201/398)
+
+=== NEW MANTLE TEST WALLET ===
+Address: 0x6EAa4b0cFAe1020127E5A410fF7683a22a28Cd71
+Private Key: 0x8518e2ed1fd79013ecd1065b76092865e637ce489acf8a860ba820493ba0fcc1
+Mnemonic: spring detect slight hospital message morning arrive uphold peanut sorry skin disease
+
+Mantle Sepolia Explorer: https://sepolia.mantlescan.xyz/address/0x6EAa4b0cFAe1020127E5A410fF7683a22a28Cd71
+PS F:\W3\mantle-hack\cresca-app> 

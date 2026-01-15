@@ -1,34 +1,44 @@
-// Bitchat-inspired dark green terminal theme
+// Modern clean light theme - inspired by Cresca design
 export const COLORS = {
   // Main colors
-  background: '#0a0e0a',
-  cardBackground: '#141814',
-  primary: '#00ff41', // Bright terminal green
-  primaryDark: '#00cc33',
+  background: '#FFFFFF',
+  cardBackground: '#FFFFFF',
+  surface: '#F8F9FA',
+  primary: '#2D7DF6', // Blue accent
+  primaryDark: '#1A5DC9',
+  primaryLight: '#EBF2FE', // Light blue background
   
   // Text colors
-  text: '#00ff41',
-  textSecondary: '#66ff88',
-  textMuted: '#4a7c59',
-  textWhite: '#e8f5e9',
+  text: '#1A1A2E',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  textWhite: '#FFFFFF',
   
   // Status colors
-  success: '#00ff41',
-  warning: '#ffeb3b',
-  error: '#ff4444',
-  info: '#00ff41',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
   
   // UI elements
-  border: '#1a331a',
-  borderActive: '#00ff41',
-  divider: '#1a331a',
+  border: '#E5E7EB',
+  borderActive: '#2D7DF6',
+  divider: '#F3F4F6',
   
   // Shadows and overlays
-  shadow: '#000000',
-  overlay: 'rgba(10, 14, 10, 0.9)',
+  shadow: 'rgba(0, 0, 0, 0.08)',
+  overlay: 'rgba(0, 0, 0, 0.5)',
   
   // Chart colors
-  chartGreen: '#00ff41',
-  chartRed: '#ff4444',
-  chartYellow: '#ffeb3b',
+  chartGreen: '#22C55E',
+  chartRed: '#EF4444',
+  chartYellow: '#F59E0B',
+  
+  // Additional colors for new design
+  accentGreen: '#22C55E',
+  accentRed: '#EF4444',
+  inputBackground: '#F8F9FA',
+  tabBarBackground: '#FFFFFF',
+  iconDefault: '#9CA3AF',
+  iconActive: '#2D7DF6',
 };

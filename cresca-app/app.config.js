@@ -46,7 +46,12 @@ module.exports = {
     },
     // Completely disable updates
     updates: {
-      enabled: false
+      enabled: false,
+      checkAutomatically: "NEVER",
+      fallbackToCacheTimeout: 0
+    },
+    runtimeVersion: {
+      policy: "nativeVersion"
     }
   }
 };
